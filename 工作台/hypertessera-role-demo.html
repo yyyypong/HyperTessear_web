@@ -1,0 +1,727 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HyperTessera 角色工作台架构 Demo</title>
+  <style>
+    :root {
+      --bg: radial-gradient(140% 120% at 10% 5%, #e6f2ff, #ffffff 40%, #edf5ff 100%);
+      --panel: rgba(255, 255, 255, 0.9);
+      --panel-border: rgba(26, 64, 125, 0.12);
+      --text: #133057;
+      --muted: #49627d;
+      --primary: #2d66f8;
+      --primary-soft: rgba(45, 102, 248, 0.12);
+      --ok: #0b8f6f;
+      --warn: #d97706;
+      --danger: #b42318;
+      --shadow: 0 18px 50px rgba(6, 32, 77, 0.14);
+      --font-sans: "Inter", "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      font-family: var(--font-sans);
+      color: var(--text);
+      background: var(--bg);
+      min-height: 100%;
+    }
+
+    .container {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    .topbar {
+      display: flex;
+      gap: 12px;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 18px;
+      flex-wrap: wrap;
+    }
+
+    h1, h2, h3 {
+      margin: 0;
+      letter-spacing: 0.01em;
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--panel-border);
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 14px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(6px);
+    }
+
+    .small {
+      color: var(--muted);
+      font-size: 0.94rem;
+      margin: 6px 0 0;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 12px;
+    }
+
+    .col-4 { grid-column: span 4; }
+    .col-6 { grid-column: span 6; }
+    .col-8 { grid-column: span 8; }
+    .col-12 { grid-column: span 12; }
+
+    .btnbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    button, select, input {
+      border-radius: 10px;
+      border: 1px solid #c5d5ef;
+      padding: 10px 14px;
+      font-size: 14px;
+      background: #fff;
+      color: var(--text);
+    }
+
+    button {
+      border: 1px solid transparent;
+      background: linear-gradient(180deg, #2d66f8, #234cc7);
+      color: white;
+      cursor: pointer;
+      transition: transform 0.15s, filter 0.15s;
+      font-weight: 600;
+    }
+
+    button:hover { filter: brightness(1.03); transform: translateY(-1px);}
+    button.ghost {
+      background: #f4f7fb;
+      color: var(--text);
+      border-color: #bfd0ec;
+      font-weight: normal;
+    }
+    button.warn {
+      background: linear-gradient(180deg, #f6ad55, #dd6b20);
+      color: #fff;
+      border-color: #c05621;
+    }
+    button.danger {
+      background: linear-gradient(180deg, #f35d5d, #c53030);
+      border-color: #8b1616;
+    }
+
+    .pill {
+      display: inline-block;
+      border-radius: 999px;
+      padding: 5px 10px;
+      background: var(--primary-soft);
+      color: #204aa8;
+      font-size: 0.83rem;
+      margin-left: 8px;
+      font-weight: 600;
+    }
+
+    .grid-two { display: grid; gap: 12px; grid-template-columns: minmax(240px, 280px) 1fr; }
+    .sidebar {
+      border-right: 1px solid var(--panel-border);
+      padding-right: 12px;
+      min-height: 480px;
+    }
+    .role-list {
+      margin-top: 10px;
+      display: grid;
+      gap: 8px;
+    }
+    .role-item {
+      text-align: left;
+      width: 100%;
+      background: #f8fbff;
+      color: var(--text);
+      border: 1px solid #c7d8f4;
+      padding: 10px 12px;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+    .role-item:hover { background: #eff5ff; }
+    .role-item.active {
+      background: #d8e7ff;
+      border-color: #5b82ff;
+    }
+
+    .panel-title {
+      margin-top: 0;
+      margin-bottom: 12px;
+      font-size: 1.1rem;
+    }
+    .chips {
+      display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 12px;
+    }
+
+    .chip {
+      background: #eef4ff;
+      border-radius: 999px;
+      padding: 4px 10px;
+      border: 1px solid #d4e2ff;
+      font-size: 0.82rem;
+      color: #244ca5;
+    }
+
+    .action-card {
+      border: 1px dashed #b7ccf0;
+      border-radius: 12px;
+      padding: 10px 12px;
+      margin-bottom: 10px;
+      background: #fbfdff;
+    }
+    .action-card strong {
+      display: block;
+      margin-bottom: 4px;
+    }
+    .muted-inline { color: var(--muted); font-size: 0.9rem; }
+    .tx-log {
+      margin-top: 12px;
+      border: 1px solid #d9e6f8;
+      border-radius: 10px;
+      overflow: hidden;
+      background: #fff;
+    }
+    .tx-log table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+    .tx-log th, .tx-log td {
+      padding: 9px 10px;
+      border-bottom: 1px solid #edf2fb;
+      text-align: left;
+    }
+    .tx-log th {
+      background: #f4f8ff;
+      font-weight: 700;
+      color: #1d3f74;
+    }
+
+    .list {
+      display: grid;
+      gap: 8px;
+    }
+    .pending-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border: 1px solid #dde6f8;
+      border-radius: 10px;
+      padding: 10px;
+      background: #fff;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    @media (max-width: 900px) {
+      .row, .grid-two { display: block; }
+      .col-4, .col-6, .col-8, .col-12 { width: 100%; }
+      .sidebar { border-right: 0; border-bottom: 1px solid var(--panel-border); padding-right: 0; padding-bottom: 12px; margin-bottom: 12px; min-height: 0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header class="topbar">
+      <div>
+        <h1>HyperTessera 角色工作台结构 Demo</h1>
+        <p class="small">说明：这是只用于演示架构流转的前端页面，不接链、不连钱包、无后端接口。</p>
+      </div>
+      <div class="btnbar">
+        <button class="ghost" id="home-btn">首页</button>
+        <button class="ghost" id="vault-btn">Vault 审核页</button>
+        <button class="ghost" id="logout-btn" style="display:none;">退出登录</button>
+      </div>
+    </header>
+
+    <main id="app"></main>
+  </div>
+
+  <script>
+    const app = document.getElementById('app');
+    const homeBtn = document.getElementById('home-btn');
+    const vaultBtn = document.getElementById('vault-btn');
+    const logoutBtn = document.getElementById('logout-btn');
+
+    const NAVIGATIONS = {
+      HOME: 'home',
+      ISSUANCE: 'mode/issuance',
+      MANAGEMENT: 'mode/management',
+      VAULT_REVIEW: 'vault/review',
+    };
+
+    const NETWORKS = ['Ethereum', 'BSC', 'Polygon', 'Arbitrum'];
+
+    const ROLES = {
+      governor: { label: 'Governor（协议级管理员）', scope: 'Protocol' },
+      'vault-owner': { label: 'Vault Owner', scope: 'Vault' },
+      curator: { label: 'Curator', scope: 'Vault' },
+      guardian: { label: 'Guardian', scope: 'Vault' },
+      allocator: { label: 'Allocator', scope: 'Vault' },
+      'settlement-operator': { label: 'Settlement Operator', scope: 'Vault' },
+      keeper: { label: 'Keeper', scope: 'Vault' },
+      'asset-owner': { label: 'Asset Owner', scope: 'Asset' },
+      'token-agent': { label: 'Token Agent', scope: 'Asset' },
+      'proof-publisher': { label: 'Proof Publisher', scope: 'Asset' },
+      'wrapper-controller': { label: 'Wrapper Controller', scope: 'Wrapper' },
+      'nav-signer': { label: 'NAV Signer', scope: 'Vault' },
+      'adapter-data-provider': { label: 'Adapter Data Provider', scope: 'Adapter' },
+      'psm-authorized-signer': { label: 'PSM 授权签名', scope: 'Asset' },
+      relayer: { label: 'Relayer', scope: 'Permissionless' }
+    };
+
+    const ROLE_ACTIONS = {
+      governor: ['成员授权/去权', '协议暂停/恢复模块', 'Revenue treasury 管理'],
+      'vault-owner': ['配置沉淀金库角色', '设置清算', '绑定模块', '转移 Owner'],
+      curator: ['设置费用参数', '管理 Adapter', '订单处理', '设置数据策略'],
+      guardian: ['暂停/恢复 Vault', '撤销挂单', '冻结 allocator'],
+      allocator: ['Buy / Sell', 'Rebalance', '清除 Deal', '跨域资产桥接'],
+      'settlement-operator': ['签名 settlement 指令'],
+      keeper: ['开启认购', '闭环计算', '进入结算阶段', '记录 Claim'],
+      'asset-owner': ['资产注册', '更新元数据', '转让资产主权', '初始化 Mint/Burn'],
+      'token-agent': ['Mint 审批', 'Burn 审批'],
+      'proof-publisher': ['发布资产证明'],
+      'wrapper-controller': ['部署 Wrapper', '设置签名者', '暂停 Wrapper 资产'],
+      'nav-signer': ['签名 NAV'],
+      'adapter-data-provider': ['更新 Adapter Deal Data'],
+      'psm-authorized-signer': ['签名 PSM 授权'],
+      relayer: ['提交 settlement 批次', '提交 NAV', '提交授权/Timelock 执行']
+    };
+
+    const WALLET_ROLES = {
+      '0xA11CE': {
+        Ethernet: ['governor', 'asset-owner', 'proof-publisher'],
+        BSC: ['vault-owner', 'curator', 'allocator', 'keeper'],
+      },
+      '0xB0B5': {
+        Ethereum: ['token-agent', 'psm-authorized-signer', 'nav-signer'],
+        Polygon: ['asset-owner', 'token-agent', 'proof-publisher', 'relayer'],
+      },
+      '0xDEMO': {
+        Ethereum: ['asset-owner', 'token-agent', 'proof-publisher', 'wrapper-controller', 'settlement-operator'],
+        Arbitrum: ['allocator', 'keeper', 'nav-signer', 'adapter-data-provider'],
+      },
+    };
+
+    const MODE_MAP = {
+      issuance: ['asset-owner', 'token-agent', 'proof-publisher', 'wrapper-controller', 'psm-authorized-signer', 'governor'],
+      management: ['governor', 'vault-owner', 'curator', 'guardian', 'allocator', 'keeper', 'settlement-operator', 'nav-signer', 'adapter-data-provider', 'relayer']
+    };
+
+    const VAULT_REVIEW_ACCOUNTS = {
+      'auditor@hypertessera': 'demo123',
+      'ops@hypertessera': 'vault000'
+    };
+
+    const VAULT_QUEUE = [
+      { id: 'VT-2026-0007', token: 'USD-HPT', assetClass: 'Stable Vault', submitter: 'issuer-team', status: '待审核' },
+      { id: 'VT-2026-0012', token: 'ETH-GLD', assetClass: 'Wrapped Vault', submitter: 'strategy-team', status: '待审核' },
+    ];
+
+    const state = {
+      route: NAVIGATIONS.HOME,
+      connected: false,
+      network: 'Ethereum',
+      wallet: '',
+      rolesCurrentNetwork: [],
+      mode: '',
+      activeRole: '',
+      txLog: [],
+      vaultAuth: false,
+      vaultUser: '',
+      vaultPending: [...VAULT_QUEUE],
+      vaultProcessed: [],
+    };
+
+    const txId = () => `SIM-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+
+    function splitArea(route) {
+      const [prefix, slug] = route.split('/');
+      if (route === NAVIGATIONS.HOME) return { page: 'home' };
+      if (route === NAVIGATIONS.VAULT_REVIEW) return { page: 'vault-review' };
+      if (prefix === 'mode') return { page: 'mode', mode: slug };
+      return { page: 'home' };
+    }
+
+    function availableRoles(mode, address) {
+      if (!address) return [];
+      const map = WALLET_ROLES[address];
+      if (!map) return [];
+      const owned = map[state.network] || [];
+      return MODE_MAP[mode].filter((r) => owned.includes(r));
+    }
+
+    function setRoute(next, replace = false) {
+      state.route = next;
+      if (replace) {
+        location.hash = next;
+      } else {
+        location.hash = next;
+      }
+      render();
+    }
+
+    function setPageRole(roleId) {
+      state.activeRole = roleId;
+      render();
+    }
+
+    function doAction(action) {
+      const record = {
+        time: new Date().toLocaleTimeString(),
+        role: state.activeRole,
+        action,
+        status: '模拟发送成功',
+        tx: txId(),
+      };
+      state.txLog = [record, ...state.txLog].slice(0, 8);
+      render();
+    }
+
+    function approveVault(itemId, ok) {
+      const item = state.vaultPending.find((x) => x.id === itemId);
+      if (!item) return;
+      item.status = ok ? '通过' : '驳回';
+      item.reviewBy = state.vaultUser;
+      item.reviewAt = new Date().toLocaleString();
+      state.vaultPending = state.vaultPending.filter((x) => x.id !== itemId);
+      state.vaultProcessed = [{ ...item }, ...state.vaultProcessed];
+      render();
+    }
+
+    function getRouteFromHash() {
+      const hash = location.hash.replace('#', '');
+      if (!hash) return NAVIGATIONS.HOME;
+      return hash;
+    }
+
+    function renderHome() {
+      app.innerHTML = `
+        <section class="card">
+          <h2>第一步：先选网络 + 登录钱包</h2>
+          <p class="small">这个区域模拟钱包地址和网络权限匹配，显示“当前钱包在该网络下有哪些角色”。</p>
+          <div class="row">
+            <label class="col-4">
+              <div class="small">选择网络</div>
+              <select id="network-select">
+                ${NETWORKS.map((n) => `<option value="${n}" ${state.network === n ? 'selected' : ''}>${n}</option>`).join('')}
+              </select>
+            </label>
+            <label class="col-4">
+              <div class="small">输入钱包地址（模拟）</div>
+              <input id="wallet-input" value="${state.wallet}" placeholder="0x..." />
+            </label>
+            <div class="col-4" style="display:flex; align-items:flex-end;">
+              <button id="connect-btn">${state.connected ? '更新连接' : '连接钱包'}</button>
+            </div>
+          </div>
+          <p class="small">内置示例地址：<span class="chip">0xA11CE</span><span class="chip">0xB0B5</span><span class="chip">0xDEMO</span></p>
+        </section>
+
+        <section class="row">
+          <div class="col-6 card">
+            <h2 class="panel-title">资产发行（含 Token Agent、Proof Publisher 等）</h2>
+            <p class="small">左边入口用于演示一级分层：Issuer 系列角色。</p>
+            <div class="btnbar">
+              <button id="to-issuance">进入资产发行</button>
+            </div>
+          </div>
+          <div class="col-6 card">
+            <h2 class="panel-title">资产管理（含 Vault Owner、Allocator 等）</h2>
+            <p class="small">左边入口用于演示第二大类：Vault 生命周期与治理执行。</p>
+            <div class="btnbar">
+              <button id="to-management">进入资产管理</button>
+            </div>
+          </div>
+        </section>
+      `;
+
+      document.getElementById('network-select').addEventListener('change', (e) => {
+        state.network = e.target.value;
+        if (state.connected) refreshByWallet();
+        render();
+      });
+
+      document.getElementById('wallet-input').addEventListener('input', (e) => {
+        state.wallet = e.target.value.trim();
+      });
+
+      document.getElementById('connect-btn').addEventListener('click', () => {
+        const address = state.wallet.trim();
+        if (!address) {
+          alert('请输入钱包地址');
+          return;
+        }
+        state.connected = true;
+        refreshByWallet();
+        render();
+      });
+
+      document.getElementById('to-issuance').addEventListener('click', () => setRoute(NAVIGATIONS.ISSUANCE));
+      document.getElementById('to-management').addEventListener('click', () => setRoute(NAVIGATIONS.MANAGEMENT));
+    }
+
+    function refreshByWallet() {
+      const list = WALLET_ROLES[state.wallet];
+      const roles = list ? (list[state.network] || []) : [];
+      state.rolesCurrentNetwork = roles;
+      if (!roles.includes(state.activeRole)) {
+        state.activeRole = '';
+      }
+      if (!state.connected) {
+        state.connected = true;
+      }
+    }
+
+    function renderModePage(mode) {
+      const modeRoles = availableRoles(mode, state.wallet);
+      const isIssuance = mode === 'issuance';
+      const modeLabel = isIssuance ? '资产发行' : '资产管理';
+
+      if (!state.connected) {
+        app.innerHTML = `
+          <section class="card">
+            <h2>尚未连接钱包</h2>
+            <p class="small">请先返回首页连接钱包再进入工作台。</p>
+            <div class="btnbar"><button id="jump-home">返回首页</button></div>
+          </section>
+        `;
+        document.getElementById('jump-home').addEventListener('click', () => setRoute(NAVIGATIONS.HOME));
+        return;
+      }
+
+      if (!modeRoles.length) {
+        app.innerHTML = `
+          <section class="card">
+            <h2>${modeLabel} 工作台</h2>
+            <p class="small">当前钱包在 ${state.network} 网络无对应角色权限。请换钱包或网络。</p>
+            <div class="btnbar">
+              <button class="ghost" id="to-home">返回首页</button>
+            </div>
+          </section>
+        `;
+        document.getElementById('to-home').addEventListener('click', () => setRoute(NAVIGATIONS.HOME));
+        return;
+      }
+
+      if (!state.activeRole) {
+        state.activeRole = modeRoles[0];
+      }
+
+      app.innerHTML = `
+        <section class="card">
+          <h2>${modeLabel} 工作台</h2>
+          <p class="small">
+            网络：${state.network} ｜ 钱包：${state.wallet}
+            <span class="pill">当前角色数 ${modeRoles.length}</span>
+          </p>
+        </section>
+
+        <section class="card grid-two">
+          <aside class="sidebar">
+            <h3 class="panel-title">左侧：我的角色入口</h3>
+            <p class="small">只显示当前网络下当前钱包拥有、且属于该模块的角色。</p>
+            <div class="role-list" id="role-list"></div>
+          </aside>
+          <section>
+            <h3 class="panel-title">右侧：角色面板</h3>
+            <p class="small">点击左侧角色，可切换到不同工作台视图。</p>
+            <div class="chips">
+              <span class="chip">作用域：${ROLES[state.activeRole].scope}</span>
+              <span class="chip">当前角色：${ROLES[state.activeRole].label}</span>
+              <span class="chip">可操作：${(ROLE_ACTIONS[state.activeRole] || []).length}</span>
+            </div>
+            <div class="card">
+              <div class="chips">
+                <span class="chip">路由：#${state.route}</span>
+                <span class="chip">页面用途：${modeLabel}</span>
+              </div>
+              ${(ROLE_ACTIONS[state.activeRole] || ['无可执行动作']).map((action) => `
+                <div class="action-card">
+                  <strong>${action}</strong>
+                  <p class="small muted-inline">用于演示按钮行为。点击后向左侧日志区写入模拟交易记录。</p>
+                  <button data-action="${action}">模拟执行</button>
+                </div>
+              `).join('')}
+            </div>
+            <div class="tx-log">
+              <table>
+                <thead>
+                  <tr>
+                    <th>时间</th><th>角色</th><th>动作</th><th>状态</th><th>模拟交易ID</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${state.txLog.length
+                    ? state.txLog.map((row) => `
+                        <tr>
+                          <td>${row.time}</td>
+                          <td>${ROLES[row.role]?.label || row.role}</td>
+                          <td>${row.action}</td>
+                          <td>${row.status}</td>
+                          <td>${row.tx}</td>
+                        </tr>`).join('')
+                    : '<tr><td colspan="5" class="muted-inline">尚未有执行记录</td></tr>'}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+      `;
+
+      const roleListEl = document.getElementById('role-list');
+      modeRoles.forEach((r) => {
+        const item = document.createElement('button');
+        item.type = 'button';
+        item.className = 'role-item';
+        if (r === state.activeRole) item.classList.add('active');
+        item.textContent = `${ROLES[r].label} (${ROLES[r].scope})`;
+        item.addEventListener('click', () => setPageRole(r));
+        roleListEl.appendChild(item);
+      });
+
+      document.querySelectorAll('.action-card button').forEach((btn) => {
+        btn.addEventListener('click', () => doAction(btn.dataset.action));
+      });
+    }
+
+    function renderVaultReview() {
+      const pendingHTML = state.vaultPending.map((v) => `
+        <div class="pending-item">
+          <div>
+            <strong>${v.id}</strong>
+            <div class="small">${v.token}｜${v.assetClass}｜提交人 ${v.submitter}｜状态：${v.status}</div>
+          </div>
+          <div class="btnbar">
+            <button data-vault="${v.id}" data-ok="1" class="warn">通过上架</button>
+            <button data-vault="${v.id}" data-ok="0" class="danger">驳回</button>
+          </div>
+        </div>
+      `).join('');
+
+      const processedHTML = state.vaultProcessed.slice(0, 3).map((v) => `
+        <div class="pending-item">
+          <div>
+            <strong>${v.id}</strong>
+            <div class="small">结果：${v.status}｜操作者：${v.reviewBy}｜${v.reviewAt}</div>
+          </div>
+        </div>
+      `).join('');
+
+      if (!state.vaultAuth) {
+        app.innerHTML = `
+          <section class="card">
+            <h2>Vault 审核（演示版）</h2>
+            <p class="small">不做链上角色认证，先用账号密码模拟管理员登录。</p>
+            <div class="row">
+              <label class="col-6">
+                <div class="small">账号</div>
+                <input id="vault-user" placeholder="auditor@hypertessera" />
+              </label>
+              <label class="col-6">
+                <div class="small">密码</div>
+                <input id="vault-pass" type="password" placeholder="demo123" />
+              </label>
+            </div>
+            <div class="btnbar" style="margin-top: 10px;">
+              <button id="vault-login">管理员登录</button>
+              <button class="ghost" id="go-home">返回主页</button>
+            </div>
+            <p class="small">演示用户：admin 系列：auditor@hypertessera / demo123</p>
+          </section>
+        `;
+        document.getElementById('vault-login').addEventListener('click', () => {
+          const u = document.getElementById('vault-user').value.trim();
+          const p = document.getElementById('vault-pass').value.trim();
+          if (VAULT_REVIEW_ACCOUNTS[u] && VAULT_REVIEW_ACCOUNTS[u] === p) {
+            state.vaultAuth = true;
+            state.vaultUser = u;
+            render();
+          } else {
+            alert('账号或密码错误');
+          }
+        });
+        document.getElementById('go-home').addEventListener('click', () => setRoute(NAVIGATIONS.HOME));
+        return;
+      }
+
+      app.innerHTML = `
+        <section class="card">
+          <h2>Vault 审核台</h2>
+          <p class="small">审核通过后才会上架产品页面（演示仅更新本地列表）。</p>
+          <div class="chips">
+            <span class="chip">当前管理员：${state.vaultUser}</span>
+          </div>
+        </section>
+
+        <section class="card">
+          <h3 class="panel-title">待审核列表</h3>
+          <div class="list">${pendingHTML || '<div class="small">当前无待审核 Vault</div>'}</div>
+        </section>
+
+        <section class="card">
+          <h3 class="panel-title">最近处理</h3>
+          <div class="list">${processedHTML || '<div class="small">暂无处理记录</div>'}</div>
+        </section>
+      `;
+
+      document.querySelectorAll('[data-vault]').forEach((btn) => {
+        const id = btn.dataset.vault;
+        btn.addEventListener('click', () => approveVault(id, btn.dataset.ok === '1'));
+      });
+    }
+
+    function render() {
+      const route = getRouteFromHash();
+      state.route = route || NAVIGATIONS.HOME;
+      const parsed = splitArea(state.route);
+      logoutBtn.style.display = state.connected ? 'inline-block' : 'none';
+
+      if (state.connected && route.startsWith('mode/')) {
+        state.mode = route.split('/')[1];
+      } else {
+        state.mode = '';
+      }
+
+      if (parsed.page === 'mode') {
+        renderModePage(parsed.mode);
+      } else if (parsed.page === 'vault-review') {
+        renderVaultReview();
+      } else {
+        renderHome();
+      }
+      if (!state.connected && parsed.page !== 'vault-review') {
+        homeBtn.style.display = 'none';
+      } else {
+        homeBtn.style.display = 'inline-block';
+      }
+    }
+
+    homeBtn.addEventListener('click', () => setRoute(NAVIGATIONS.HOME));
+    vaultBtn.addEventListener('click', () => setRoute(NAVIGATIONS.VAULT_REVIEW));
+    logoutBtn.addEventListener('click', () => {
+      state.connected = false;
+      state.wallet = '';
+      state.rolesCurrentNetwork = [];
+      state.activeRole = '';
+      state.txLog = [];
+      setRoute(NAVIGATIONS.HOME, true);
+    });
+
+    window.addEventListener('hashchange', render);
+    refreshByWallet();
+    render();
+  </script>
+</body>
+</html>

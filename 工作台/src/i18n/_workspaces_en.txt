@@ -1,0 +1,17 @@
+  workspaces: {
+    roles: workspaceRoleStrings,
+    actions: workspaceActionStrings,
+    capabilities: {
+      available: 'Available', readOnly: 'Read only', unauthorized: 'Unauthorized', wrongNetwork: 'Wrong network', walletRequired: 'Wallet required', objectRequired: 'Select an object', targetOnly: 'Requires target contract / SDK', paused: 'Paused', invalidState: 'Unavailable in the current lifecycle state', unsupportedDeployment: 'Unsupported deployment',
+    },
+    badges: { legacyCompatible: 'Legacy Compatible', target: 'Target' },
+    forms: {
+      fields: workspaceFieldStrings,
+      validation: {
+        required: 'This field is required.', positive: 'Enter a value greater than zero.', nonNegative: 'Enter zero or a positive value.', future: 'Enter a future timestamp.', pastOrPresent: 'Timestamp cannot be in the future.', range: 'Enter a value within the allowed range.', minLength: 'Enter enough characters.', url: 'Enter a valid URL.',
+      },
+    },
+    transaction: {
+      prepared: 'Prepared', awaitingWallet: 'Awaiting wallet confirmation', submitted: 'Submitted', confirmed: 'Confirmed', signed: 'Signed', rejected: 'Rejected in wallet', failed: 'Failed',
+    },
+  },

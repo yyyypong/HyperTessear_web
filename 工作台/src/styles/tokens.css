@@ -1,0 +1,237 @@
+/* =============================================================
+   Design tokens.
+
+   Monochrome palette aligned with the landing cover — charcoal
+   #141518, ink #1a1a1a, muted #8e8e8e, page base #FAFAFA — so every
+   route outside the homepage shares the same black / white / grey
+   register, type scale and rhythm.
+
+   No component should hardcode a hex value.
+   ============================================================= */
+:root {
+  /* --- brand ------------------------------------------------- */
+  /* Monochrome, aligned with the landing palette (#141518 / #1a1a1a):
+     every surface outside the homepage consumes these tokens, so the
+     whole site reads in the same black / white / grey register. */
+  --navy: #1a1a1a;         /* 主结构色：标题 / 主按钮 */
+  --navy-2: #000000;       /* hover / 强调 */
+  --navy-deep: #141518;    /* 深底：页脚 / 收尾区 / 工作台侧栏 */
+  --blue-tint: #F4F4F5;    /* 浅灰底区块 */
+  --blue-line: #E5E5E7;
+
+  --gold: #9ca3af;         /* 弱化强调：中灰 */
+  --gold-soft: #F4F4F5;    /* 灰底浅色 */
+  --gold-line: #E5E5E7;
+  --gold-mid: #6b7280;
+  --gold-deep: #4b5563;    /* 可读的灰文字（eyebrow 等） */
+
+  /* --- neutrals ---------------------------------------------- */
+  --ink: #1a1a1a;          /* 正文 */
+  --ink-soft: #3f3f46;
+  --mut: #8e8e8e;          /* 次要文字 */
+  --mut-2: #a3a3a3;        /* 三级文字 */
+  --line: #E5E5E7;         /* 主描边 */
+  --line-2: #F0F0F1;       /* 更轻的分隔线 */
+  --surface: #FFFFFF;
+  --canvas: #FAFAFA;       /* 页基 */
+  --box: #F5F5F6;          /* 浅填充块 */
+
+  --ok: #17705B;
+  --danger: #A93B32;
+
+  /* --- dark bands -------------------------------------------- */
+  /* The hero, the integrations band, the closing panel and the footer all
+     share one dark field so the page reads as alternating light and dark
+     rather than as four differently-dark boxes. */
+  --dark: #141518;
+  --dark-2: #1b1c21;
+  --on-dark: #F4F4F5;
+  --on-dark-mut: #a3a3a3;
+  --on-dark-mut-2: #737373;
+  --on-dark-line: rgba(255, 255, 255, .11);
+  --on-dark-fill: rgba(255, 255, 255, .05);
+
+  /* --- elevation --------------------------------------------- */
+  /* Two-part shadows: a 1px contact edge plus a wide, very soft
+     ambient. Single large blurs read as haze rather than lift. */
+  --shadow-sm: 0 1px 2px rgba(26, 26, 26, .04);
+  --shadow: 0 1px 2px rgba(26, 26, 26, .04), 0 12px 28px -10px rgba(0, 0, 0, .12);
+  --shadow-lg: 0 1px 3px rgba(26, 26, 26, .05), 0 28px 56px -16px rgba(0, 0, 0, .18);
+  --ring: 0 0 0 3px rgba(0, 0, 0, .18);
+
+  /* --- geometry ---------------------------------------------- */
+  --r: 16px;
+  --r-sm: 10px;
+  --r-lg: 24px;
+  --r-xl: 32px;
+  --r-pill: 999px;
+
+  /* Masthead height, set in stone rather than measured: .hdr__inner is
+     given exactly this height in app.css, so the dark opening band on
+     every route can pad for it without any runtime measurement. */
+  --hdr-h: 68px;
+
+  /* --- motion ------------------------------------------------ */
+  /* Expo-out. Long tail, no overshoot: things decelerate into place the
+     way heavy objects do, which is what makes the page feel solid rather
+     than springy. Nothing here bounces. */
+  --ease: cubic-bezier(.16, 1, .3, 1);
+  --ease-io: cubic-bezier(.65, .05, .36, 1);
+  --dur: .28s;
+  --dur-slow: .8s;
+  --stagger: 70ms;
+
+  /* --- type -------------------------------------------------- */
+  /* Geist covers Latin and the figures, Noto Sans SC covers Hanzi. The
+     platform faces stay as fallback but are no longer relied on: Microsoft
+     YaHei ships only 300/400/700, so any weight in between snapped to bold
+     and made every Chinese heading read heavier than its English twin. */
+  --font-sans: "Geist", "Noto Sans SC", "PingFang SC", "Microsoft YaHei",
+    "Hiragino Sans GB", system-ui, -apple-system, sans-serif;
+  --font-mono: "Geist Mono", "SF Mono", ui-monospace, SFMono-Regular, Menlo,
+    "Noto Sans SC", monospace;
+
+  --fs-hero: clamp(2.625rem, 1.1rem + 5.4vw, 5.25rem);
+  --fs-display: clamp(2.125rem, 1.2rem + 3.4vw, 3.75rem);
+  --fs-h1: clamp(1.875rem, 1.3rem + 2vw, 3rem);
+  --fs-h2: clamp(1.625rem, 1.2rem + 1.5vw, 2.5rem);
+  --fs-h3: 1.125rem;
+  --fs-lede: clamp(1rem, .95rem + .25vw, 1.1875rem);
+  --fs-body: .9375rem;
+  --fs-sm: .8125rem;
+  --fs-xs: .75rem;
+  --fs-micro: .6875rem;
+
+  --track-tight: -.022em;   /* display sizes need negative tracking */
+  --track-wide: .085em;     /* eyebrows / all-caps Latin only */
+  /* Wide tracking on Hanzi reads as a spacing bug, not as emphasis —
+     mixed-script labels get a restrained value instead. */
+  --track-label: .035em;
+}
+
+* { box-sizing: border-box; }
+
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+  background: var(--canvas);
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: var(--fs-body);
+  color: var(--ink);
+  line-height: 1.6;
+  letter-spacing: -.003em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: var(--canvas);
+  /* Bands supply their own fills now, so the page background stays flat.
+     A gradient behind them showed through the seams between bands.
+
+     Deliberately no `overflow-x: hidden` here: it makes <body> a scroll
+     container, and the sticky masthead then has a scrollport that never
+     scrolls, so it silently stops sticking. The two elements that can
+     overflow horizontally — the marquee and the footer wordmark — clip
+     themselves instead. */
+}
+
+a { color: inherit; text-decoration: none; }
+
+h1, h2, h3, h4 {
+  margin: 0;
+  font-weight: 600;
+  letter-spacing: var(--track-tight);
+  line-height: 1.14;
+  text-wrap: balance;
+}
+
+/* Noto Sans SC ships 300/400/500/700, so CSS weight 600 resolves upward to
+   700 and every Chinese headline lands a full step heavier than its English
+   equivalent. Hanzi display type gets Medium, and neutral tracking because
+   Hanzi at 500 needs air that Latin at 600 does not. */
+:root:lang(zh-CN) h1,
+:root:lang(zh-CN) h2 {
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+p { text-wrap: pretty; }
+
+button {
+  font-family: inherit;
+  font-size: inherit;
+  cursor: pointer;
+}
+
+::selection {
+  background: var(--navy);
+  color: #fff;
+}
+
+:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+  border-radius: var(--r-sm);
+}
+
+/* Figures must align in columns; proportional digits make tables
+   jitter as values change. Geist Mono slashes its zero by default,
+   which belongs in a code listing, not in a currency figure. */
+.mono,
+.num,
+input[type="number"] {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+[class*="__value"],
+[class*="__amt"],
+[class*="__apy"],
+[class*="__pct"],
+.mono, .num, .dtable td, .capbar__label, .crumbs, .filterbar__count {
+  font-feature-settings: "tnum" 1, "zero" 0;
+}
+
+/* Screen-reader-only, for labels that are visually implied */
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap; border: 0;
+}
+
+/* ---------- motion ------------------------------------------- */
+/* Reveal state is applied by <Reveal/>; the transition lives here so all
+   of the page's timing is in one place. */
+.reveal {
+  opacity: 0;
+  transform: translate3d(0, 22px, 0);
+  transition:
+    opacity var(--dur-slow) var(--ease),
+    transform var(--dur-slow) var(--ease);
+  transition-delay: calc(var(--step, 0) * var(--stagger));
+  will-change: opacity, transform;
+}
+.reveal.is-in {
+  opacity: 1;
+  transform: none;
+}
+/* Once it has arrived it is a static element again — leaving will-change on
+   hundreds of nodes keeps them on their own compositor layers for the rest
+   of the session. */
+.reveal.is-in { will-change: auto; }
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .reveal { opacity: 1; transform: none; transition: none; }
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

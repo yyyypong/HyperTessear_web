@@ -1,0 +1,8 @@
+{
+  "repository": "alliancechuan/hyperTessera",
+  "commit": "7a49a6f5668e2ea9e76938a20535eabb6b99e552",
+  "sdkSource": "offchain/src/sdk.ts",
+  "typesSource": "offchain/src/types.ts",
+  "abiSource": "control-panel/abis.json",
+  "browserAdaptation": "abis.ts replaces the Node fs loader with a Vite JSON import"
+}

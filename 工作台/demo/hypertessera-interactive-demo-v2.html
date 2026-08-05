@@ -1,0 +1,904 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="HyperTessera 交互式产品与角色工作台演示">
+  <title>HyperTessera · Interactive Demo</title>
+  <style>
+    :root {
+      --ink: #13243a;
+      --muted: #607086;
+      --quiet: #8a97a8;
+      --line: #dce3eb;
+      --line-strong: #c8d2df;
+      --canvas: #f3f6f9;
+      --surface: #ffffff;
+      --surface-soft: #f8fafc;
+      --navy: #173f72;
+      --navy-strong: #0c2c52;
+      --navy-soft: #e9f1fb;
+      --success: #19725b;
+      --success-soft: #e7f5f0;
+      --warning: #98601b;
+      --warning-soft: #fff3dc;
+      --danger: #aa3f4c;
+      --danger-soft: #fcebed;
+      --shadow: 0 12px 32px rgba(23, 51, 80, .08);
+      --radius: 14px;
+      --radius-sm: 9px;
+      --header-h: 70px;
+      font-family: "Segoe UI", "Microsoft YaHei UI", "PingFang SC", sans-serif;
+      color: var(--ink);
+      background: var(--canvas);
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { margin: 0; min-width: 320px; background: var(--canvas); }
+    button, input, select, textarea { font: inherit; }
+    button, a { -webkit-tap-highlight-color: transparent; }
+    button { cursor: pointer; }
+    a { color: inherit; text-decoration: none; }
+    h1, h2, h3, h4, p { margin-top: 0; }
+    h1 { font-size: clamp(30px, 4vw, 54px); line-height: 1.08; letter-spacing: -.035em; }
+    h2 { font-size: clamp(24px, 3vw, 34px); letter-spacing: -.025em; }
+    h3 { font-size: 18px; }
+    p { line-height: 1.65; color: var(--muted); }
+
+    .topbar {
+      position: sticky; top: 0; z-index: 40; height: var(--header-h);
+      display: flex; align-items: center; gap: 24px; padding: 0 max(24px, calc((100vw - 1360px) / 2));
+      background: rgba(255,255,255,.96); border-bottom: 1px solid var(--line);
+      backdrop-filter: blur(14px);
+    }
+    .brand { font-size: 20px; font-weight: 760; letter-spacing: -.03em; white-space: nowrap; }
+    .brand span { color: var(--navy); }
+    .topnav { display: flex; align-items: center; gap: 4px; flex: 1; }
+    .navlink, .text-button {
+      border: 0; background: transparent; color: var(--muted); border-radius: 8px;
+      padding: 10px 12px; font-weight: 600; white-space: nowrap;
+    }
+    .navlink:hover, .navlink.active, .text-button:hover { color: var(--navy); background: var(--navy-soft); }
+    .top-actions { display: flex; align-items: center; gap: 8px; }
+    .network-select {
+      height: 40px; border: 1px solid var(--line-strong); border-radius: 9px; background: var(--surface);
+      color: var(--ink); padding: 0 30px 0 11px; max-width: 150px;
+    }
+
+    .btn {
+      min-height: 40px; border-radius: 9px; border: 1px solid var(--navy); padding: 9px 15px;
+      background: var(--navy); color: white; font-weight: 700; transition: transform .16s ease, box-shadow .16s ease;
+    }
+    .btn:hover { transform: translateY(-1px); box-shadow: 0 8px 18px rgba(23,63,114,.18); }
+    .btn.secondary { background: var(--surface); color: var(--navy); border-color: var(--line-strong); }
+    .btn.secondary:hover { border-color: var(--navy); box-shadow: none; }
+    .btn.ghost { border-color: transparent; background: transparent; color: var(--muted); }
+    .btn.success { background: var(--success); border-color: var(--success); }
+    .btn.warning { background: var(--warning); border-color: var(--warning); }
+    .btn.danger { background: var(--danger); border-color: var(--danger); }
+    .btn.small { min-height: 34px; padding: 6px 11px; font-size: 13px; }
+    .btn:disabled { cursor: not-allowed; opacity: .45; transform: none; box-shadow: none; }
+    .wallet-button { max-width: 180px; overflow: hidden; text-overflow: ellipsis; }
+
+    .page { max-width: 1360px; margin: 0 auto; padding: 34px 24px 72px; }
+    .page-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; margin-bottom: 26px; }
+    .page-head h1, .page-head h2 { margin-bottom: 8px; }
+    .page-head p { max-width: 720px; margin-bottom: 0; }
+    .eyebrow { color: var(--navy); font-size: 12px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; margin-bottom: 12px; }
+    .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
+    .card-pad { padding: 24px; }
+    .soft { background: var(--surface-soft); box-shadow: none; }
+    .grid { display: grid; gap: 16px; }
+    .grid.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .grid.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .grid.four { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .stack { display: grid; gap: 16px; }
+    .row { display: flex; align-items: center; gap: 12px; }
+    .row.between { justify-content: space-between; }
+    .wrap { flex-wrap: wrap; }
+    .muted { color: var(--muted); }
+    .quiet { color: var(--quiet); }
+    .small { font-size: 13px; }
+    .mono { font-family: Consolas, "SFMono-Regular", monospace; letter-spacing: -.02em; }
+    .divider { height: 1px; background: var(--line); margin: 20px 0; }
+
+    .badge {
+      display: inline-flex; align-items: center; min-height: 26px; padding: 4px 9px; border-radius: 999px;
+      background: var(--navy-soft); color: var(--navy); font-size: 12px; font-weight: 750;
+    }
+    .badge.success { color: var(--success); background: var(--success-soft); }
+    .badge.warning { color: var(--warning); background: var(--warning-soft); }
+    .badge.danger { color: var(--danger); background: var(--danger-soft); }
+    .badge.neutral { color: var(--muted); background: #edf1f5; }
+
+    .hero {
+      min-height: 530px; display: grid; grid-template-columns: 1.12fr .88fr; gap: 44px; align-items: center;
+      padding: 58px; background: var(--navy-strong); color: white; overflow: hidden;
+    }
+    .hero h1 { max-width: 720px; margin-bottom: 20px; }
+    .hero p { color: #c8d7e8; font-size: 18px; max-width: 630px; }
+    .hero .eyebrow { color: #9dc1e9; }
+    .hero-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 28px; }
+    .hero .btn { background: white; border-color: white; color: var(--navy-strong); }
+    .hero .btn.secondary { color: white; background: transparent; border-color: #6686aa; }
+    .journey { padding: 24px; background: #12345e; border: 1px solid #355a83; border-radius: var(--radius); }
+    .journey-step { display: grid; grid-template-columns: 32px 1fr; gap: 12px; padding: 14px 0; border-bottom: 1px solid #355a83; }
+    .journey-step:last-child { border-bottom: 0; }
+    .step-no { width: 28px; height: 28px; display: grid; place-items: center; border: 1px solid #6f91b8; border-radius: 50%; color: white; font-weight: 800; font-size: 12px; }
+    .journey-step strong { display: block; margin-bottom: 3px; }
+    .journey-step span { color: #aebfd3; font-size: 13px; line-height: 1.45; }
+
+    .section { margin-top: 28px; }
+    .section-title { display: flex; justify-content: space-between; gap: 16px; align-items: end; margin-bottom: 14px; }
+    .section-title h2, .section-title h3 { margin-bottom: 0; }
+    .entry-card { padding: 24px; min-height: 200px; display: flex; flex-direction: column; }
+    .entry-card p { flex: 1; }
+    .entry-kicker { color: var(--navy); font-weight: 800; font-size: 13px; margin-bottom: 28px; }
+
+    .stat { padding: 20px; }
+    .stat-label { color: var(--muted); font-size: 13px; font-weight: 650; margin-bottom: 10px; }
+    .stat-value { font-size: 28px; font-weight: 780; letter-spacing: -.035em; }
+    .stat-foot { margin-top: 8px; color: var(--quiet); font-size: 12px; }
+
+    .filterbar { display: flex; flex-wrap: wrap; gap: 10px; padding: 14px; margin-bottom: 16px; }
+    .field { display: grid; gap: 7px; }
+    .field label { font-size: 13px; color: var(--muted); font-weight: 700; }
+    .input, .select, .textarea {
+      width: 100%; min-height: 42px; border: 1px solid var(--line-strong); border-radius: 9px;
+      background: white; padding: 9px 11px; color: var(--ink); outline: none;
+    }
+    .textarea { min-height: 100px; resize: vertical; }
+    .input:focus, .select:focus, .textarea:focus { border-color: var(--navy); box-shadow: 0 0 0 3px var(--navy-soft); }
+    .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 16px; }
+    .field.full { grid-column: 1 / -1; }
+    .error-text { color: var(--danger); font-size: 13px; margin-top: 8px; }
+
+    .vault-card { overflow: hidden; }
+    .vault-card-main { padding: 22px; }
+    .vault-card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+    .vault-card h3 { margin-bottom: 4px; }
+    .vault-metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 20px 0; }
+    .metric { padding: 11px; border-radius: 9px; background: var(--surface-soft); }
+    .metric span { display: block; font-size: 11px; color: var(--quiet); margin-bottom: 5px; }
+    .metric strong { font-size: 15px; }
+
+    .connect-panel { display: grid; grid-template-columns: 1fr 1.2fr; gap: 24px; align-items: stretch; }
+    .connect-copy { padding: 32px; background: var(--navy-strong); color: white; }
+    .connect-copy p { color: #c8d7e8; }
+    .account-list { padding: 14px; display: grid; gap: 8px; }
+    .account-option {
+      width: 100%; text-align: left; border: 1px solid var(--line); border-radius: 11px;
+      background: white; padding: 15px; display: flex; justify-content: space-between; gap: 12px;
+    }
+    .account-option:hover { border-color: var(--navy); background: var(--navy-soft); }
+    .account-option strong, .account-option span { display: block; }
+    .account-option span { margin-top: 5px; color: var(--muted); font-size: 12px; }
+
+    .contextbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 12px 15px; margin-bottom: 16px; box-shadow: none; }
+    .context-item { padding-right: 12px; margin-right: 4px; border-right: 1px solid var(--line); }
+    .context-item:last-child { border-right: 0; }
+    .context-item span { display: block; color: var(--quiet); font-size: 10px; text-transform: uppercase; letter-spacing: .08em; }
+    .context-item strong { font-size: 13px; }
+
+    .workspace-shell { display: grid; grid-template-columns: 264px minmax(0,1fr); gap: 18px; align-items: start; }
+    .sidebar { position: sticky; top: calc(var(--header-h) + 16px); padding: 14px; max-height: calc(100vh - var(--header-h) - 32px); overflow: auto; }
+    .side-section { margin-bottom: 18px; }
+    .side-section:last-child { margin-bottom: 0; }
+    .side-label { padding: 6px 9px; font-size: 11px; font-weight: 800; color: var(--quiet); text-transform: uppercase; letter-spacing: .09em; }
+    .side-link {
+      width: 100%; display: block; text-align: left; border: 0; background: transparent; color: var(--muted);
+      padding: 10px 9px; border-radius: 8px; font-weight: 650; margin: 2px 0;
+    }
+    .side-link:hover, .side-link.active { background: var(--navy-soft); color: var(--navy); }
+    .side-link small { display: block; margin-top: 4px; font-weight: 500; color: var(--quiet); }
+    .workspace-main { min-width: 0; }
+    .capability { padding: 18px 20px; border-left: 4px solid var(--navy); box-shadow: none; }
+    .action-list { display: grid; gap: 10px; }
+    .action-row { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 16px; align-items: center; padding: 16px 0; border-bottom: 1px solid var(--line); }
+    .action-row:last-child { border-bottom: 0; }
+    .action-row h4 { margin: 0 0 5px; }
+    .action-row p { margin: 0; font-size: 13px; }
+
+    /* ---- v2 美化：统计卡图标 / 权限芯片 / 工作台双栏 / 待办与活动 ---- */
+    .stat-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+    .stat-head .stat-label { margin-bottom: 0; }
+    .stat-icon { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; background: var(--navy-soft); color: var(--navy); flex: none; }
+    .stat-icon svg { width: 17px; height: 17px; }
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+    .chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 11px; border-radius: 999px; background: var(--surface-soft); border: 1px solid var(--line); font-size: 12px; font-weight: 650; color: var(--muted); }
+    .chip svg { width: 13px; height: 13px; color: var(--navy); }
+    .workspace-grid { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 18px; align-items: start; }
+    .side-object { padding: 14px; border: 1px solid var(--line); border-radius: 11px; background: var(--surface-soft); margin-bottom: 16px; }
+    .so-label { font-size: 10px; font-weight: 800; color: var(--quiet); text-transform: uppercase; letter-spacing: .1em; margin-bottom: 6px; }
+    .side-object strong { font-size: 14px; }
+    .todo-list { display: grid; gap: 10px; }
+    .todo-item { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 12px 14px; border: 1px solid var(--line); border-radius: 11px; }
+    .todo-item:hover { border-color: var(--line-strong); background: var(--surface-soft); }
+    .todo-main { min-width: 0; }
+    .todo-main strong { display: block; font-size: 14px; margin-bottom: 2px; }
+    .todo-main span { font-size: 12px; color: var(--quiet); }
+    .mini-timeline { display: grid; gap: 14px; }
+    .mini-timeline-item { display: grid; grid-template-columns: 12px minmax(0, 1fr); gap: 10px; }
+    .mini-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--navy); margin-top: 6px; box-shadow: 0 0 0 3px var(--navy-soft); }
+    .mini-timeline-item strong { font-size: 13px; }
+    .mini-timeline-item p { margin: 4px 0 0; font-size: 12px; color: var(--quiet); line-height: 1.55; }
+    .manage-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 14px; flex-wrap: wrap; padding: 20px 20px 4px; }
+    .manage-head h3 { margin-bottom: 4px; }
+    table.manage-table { min-width: 880px; }
+    tbody tr:hover { background: var(--surface-soft); }
+
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; min-width: 720px; }
+    th, td { padding: 13px 14px; text-align: left; border-bottom: 1px solid var(--line); font-size: 13px; vertical-align: middle; }
+    th { color: var(--quiet); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; background: var(--surface-soft); }
+    tr:last-child td { border-bottom: 0; }
+    .table-link { border: 0; background: transparent; color: var(--navy); font-weight: 750; padding: 0; }
+
+    .timeline { display: grid; gap: 0; }
+    .timeline-item { display: grid; grid-template-columns: 120px 1fr; gap: 18px; padding: 16px 0; border-bottom: 1px solid var(--line); }
+    .timeline-item:last-child { border-bottom: 0; }
+    .timeline-time { color: var(--quiet); font-size: 12px; }
+
+    .empty { padding: 54px 24px; text-align: center; }
+    .empty h3 { margin-bottom: 8px; }
+    .empty p { max-width: 520px; margin: 0 auto 20px; }
+
+    .ops-layout { min-height: 100vh; display: grid; grid-template-columns: 248px minmax(0,1fr); background: #edf1f5; }
+    .ops-side { background: var(--navy-strong); color: white; padding: 24px 16px; }
+    .ops-brand { font-size: 20px; font-weight: 800; padding: 0 10px 26px; }
+    .ops-badge { color: #9dc1e9; display: block; font-size: 11px; margin-top: 5px; text-transform: uppercase; letter-spacing: .1em; }
+    .ops-side .side-label { color: #7997b8; }
+    .ops-side .side-link { color: #c2d0df; }
+    .ops-side .side-link:hover, .ops-side .side-link.active { background: #1d4776; color: white; }
+    .ops-main { min-width: 0; }
+    .ops-top { height: 70px; display: flex; align-items: center; justify-content: space-between; padding: 0 28px; background: white; border-bottom: 1px solid var(--line); }
+    .ops-content { padding: 28px; max-width: 1220px; }
+    .login-page { min-height: 100vh; display: grid; place-items: center; padding: 24px; background: var(--navy-strong); }
+    .login-card { width: min(440px, 100%); padding: 32px; }
+    .demo-notice { padding: 12px 14px; border-radius: 9px; background: var(--warning-soft); color: var(--warning); font-size: 13px; line-height: 1.5; }
+    .review-layout { display: grid; grid-template-columns: minmax(0,1fr) 340px; gap: 18px; align-items: start; }
+    .review-actions { position: sticky; top: 88px; }
+    .check-list { display: grid; gap: 9px; }
+    .check-item { display: flex; justify-content: space-between; gap: 12px; padding: 11px 0; border-bottom: 1px solid var(--line); }
+    .check-item:last-child { border-bottom: 0; }
+
+    .toast {
+      position: fixed; right: 22px; bottom: 22px; z-index: 90; width: min(380px, calc(100vw - 44px));
+      background: var(--navy-strong); color: white; border-radius: 11px; padding: 14px 16px; box-shadow: 0 18px 50px rgba(10,28,49,.28);
+      opacity: 0; transform: translateY(12px); pointer-events: none; transition: .2s ease;
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .modal-backdrop { position: fixed; inset: 0; z-index: 80; background: rgba(9,25,43,.56); display: grid; place-items: center; padding: 18px; }
+    .modal { width: min(560px, 100%); max-height: calc(100vh - 36px); overflow: auto; padding: 24px; }
+    .modal-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; margin-bottom: 20px; }
+    .modal-head h2, .modal-head h3 { margin-bottom: 6px; }
+    .close-button { border: 0; background: var(--surface-soft); color: var(--muted); border-radius: 8px; width: 36px; height: 36px; font-size: 20px; }
+    .mobile-menu {
+      display: none; height: 40px; max-width: 86px; border: 1px solid var(--line-strong);
+      border-radius: 9px; background: var(--surface); color: var(--ink); padding: 0 8px;
+    }
+
+    @media (max-width: 1020px) {
+      .topnav { display: none; }
+      .topbar { gap: 12px; }
+      .brand { flex: 1; }
+      .hero { grid-template-columns: 1fr; padding: 42px; }
+      .grid.four { grid-template-columns: repeat(2, minmax(0,1fr)); }
+      .grid.three { grid-template-columns: repeat(2, minmax(0,1fr)); }
+      .workspace-shell { grid-template-columns: 220px minmax(0,1fr); }
+      .workspace-grid { grid-template-columns: 1fr; }
+      .review-layout { grid-template-columns: 1fr; }
+      .review-actions { position: static; }
+    }
+
+    @media (max-width: 760px) {
+      .topbar { padding: 0 16px; }
+      .brand { font-size: 17px; }
+      .network-select { display: none; }
+      .mobile-menu { display: block; }
+      .wallet-button { max-width: 124px; }
+      .page { padding: 24px 16px 60px; }
+      .page-head { display: block; }
+      .page-head .row { margin-top: 16px; }
+      .hero { min-height: 0; padding: 32px 24px; gap: 28px; }
+      .hero p { font-size: 16px; }
+      .grid.two, .grid.three { grid-template-columns: 1fr; }
+      .connect-panel { grid-template-columns: 1fr; }
+      .workspace-shell { display: block; }
+      .sidebar { position: static; max-height: none; display: flex; gap: 6px; overflow-x: auto; margin-bottom: 14px; }
+      .side-section { display: contents; }
+      .side-label { display: none; }
+      .side-object { display: none; }
+      .side-link { width: auto; min-width: max-content; border: 1px solid var(--line); background: white; }
+      .ops-layout { grid-template-columns: 1fr; }
+      .ops-side { display: flex; gap: 6px; overflow-x: auto; padding: 10px; }
+      .ops-brand, .ops-side .side-label { display: none; }
+      .ops-side .side-link { min-width: max-content; }
+      .ops-content { padding: 18px 14px 50px; }
+      .ops-top { padding: 0 16px; }
+      .form-grid { grid-template-columns: 1fr; }
+      .field.full { grid-column: auto; }
+    }
+
+    @media (max-width: 640px) {
+      .top-actions .text-button { display: none; }
+      .grid.four { grid-template-columns: 1fr; }
+      .hero-actions .btn { width: 100%; }
+      .vault-metrics { grid-template-columns: 1fr 1fr; }
+      .action-row { grid-template-columns: 1fr; }
+      .action-row .btn { width: 100%; }
+      .todo-item { grid-template-columns: 1fr; }
+      .todo-item .btn { width: 100%; }
+      .timeline-item { grid-template-columns: 1fr; gap: 5px; }
+      .contextbar { align-items: stretch; }
+      .context-item { width: calc(50% - 8px); border-right: 0; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <div id="modal-root"></div>
+
+  <script>
+    const STORAGE_KEY = 'hypertessera_interactive_demo_v2';
+    const OPS_CREDENTIALS = { email: 'reviewer@hypertessera.demo', password: 'Demo2026!' };
+
+    const NETWORKS = [
+      { id: 'ethereum', label: 'Ethereum' },
+      { id: 'arbitrum', label: 'Arbitrum' },
+      { id: 'polygon', label: 'Polygon' },
+    ];
+
+    const ROLE_DEFINITIONS = {
+      'governor': { label: 'Governor', group: 'protocol', scope: 'Protocol', summary: '管理协议级权限、关键升级和治理时间锁。', actions: ['创建角色变更提案', '排队协议升级', '执行已到期提案'] },
+      'vault-owner': { label: 'Vault Owner', group: 'vault', scope: 'Vault', summary: '配置 Vault 本地角色与所有权，并发起网站上架申请。', actions: ['管理 Vault 角色', '转移 Vault 所有权', '发起网站上架申请'] },
+      'curator': { label: 'Curator', group: 'vault', scope: 'Vault', summary: '配置策略、Adapter、费用和风险参数。', actions: ['添加 Adapter', '调整策略上限', '提交费用变更'] },
+      'guardian': { label: 'Guardian', group: 'vault', scope: 'Vault', summary: '执行紧急保护、取消待执行变更并降低风险。', actions: ['暂停新存款', '取消待执行变更', '降低风险上限'] },
+      'allocator': { label: 'Allocator', group: 'vault', scope: 'Vault', summary: '在已批准范围内执行资金分配与再平衡。', actions: ['执行资金分配', '发起再平衡', '回收闲置资金'] },
+      'settlement-operator': { label: 'Settlement Operator', group: 'vault', scope: 'Vault', summary: '生成结算批次、核对请求并提交结算签名。', actions: ['创建结算批次', '导出签名载荷', '提交结算结果'] },
+      'keeper': { label: 'Keeper', group: 'vault', scope: 'Vault', summary: '执行周期推进和自动化维护任务。', actions: ['推进生命周期', '处理到期队列', '执行维护任务'] },
+      'asset-owner': { label: 'Asset Owner', group: 'issuance', scope: 'Asset', summary: '管理资产元数据、本地角色和发行配置。', actions: ['更新资产元数据', '管理资产角色', '配置发行控制器'] },
+      'token-agent': { label: 'Token Agent', group: 'issuance', scope: 'Asset', summary: '处理资产 Token 的 Mint 与 Burn 业务申请。', actions: ['批准 Mint', '批准 Burn', '查看发行限额'] },
+      'proof-publisher': { label: 'Proof Publisher', group: 'issuance', scope: 'Asset', summary: '发布 Proof of Reserve 证明与相关引用。', actions: ['发布储备证明', '更新证明引用', '标记过期证明'] },
+      'wrapper-controller': { label: 'Wrapper Controller', group: 'issuance', scope: 'Wrapped Asset', summary: '管理包装资产参数、限额和暂停状态。', actions: ['调整 Wrap 上限', '暂停 Wrap', '恢复 Wrap'] },
+      'nav-signer': { label: 'NAV Signer', group: 'functional', scope: 'Vault', summary: '签名并提交 Vault NAV 数据。', actions: ['创建 NAV 签名', '提交 NAV 更新', '查看签名历史'] },
+      'adapter-data-provider': { label: 'Adapter Data Provider', group: 'functional', scope: 'Adapter', summary: '更新 Adapter 所依赖的链外业务数据。', actions: ['提交外部数据', '更新数据有效期', '查看数据差异'] },
+      'psm-authorized-signer': { label: 'PSM Authorized Signer', group: 'functional', scope: 'Asset', summary: '为 PSM 兑换请求生成和提交授权签名。', actions: ['签署兑换授权', '撤销未使用授权', '查看授权状态'] },
+      'relayer': { label: 'Relayer', group: 'functional', scope: 'Protocol', summary: '转发已授权消息并跟踪跨系统交付状态。', actions: ['转发授权消息', '重试失败消息', '查看交付记录'] },
+    };
+
+    const WALLETS = {
+      alice: {
+        name: 'Alice · 多角色运营账户', address: '0x71A4cB9082f3D18A28eF7231B1Fd9E3aC10A092C',
+        rolesByNetwork: {
+          ethereum: ['vault-owner','curator','allocator','asset-owner','token-agent','proof-publisher','nav-signer'],
+          arbitrum: ['guardian','keeper','adapter-data-provider'], polygon: ['asset-owner','wrapper-controller']
+        }
+      },
+      bob: {
+        name: 'Bob · 单角色签名账户', address: '0xB0b50F2421cDC9E99146D76A38A3AAfF0410B050',
+        rolesByNetwork: { ethereum: ['settlement-operator'], arbitrum: ['psm-authorized-signer'], polygon: ['relayer'] }
+      },
+      governor: {
+        name: 'Protocol Council · Governor', address: '0x6A0e5D972F07a8152A5D992319bA75e104eA0011',
+        rolesByNetwork: { ethereum: ['governor'], arbitrum: [], polygon: [] }
+      },
+      guest: {
+        name: 'Guest · 无角色账户', address: '0x000000000000000000000000000000000000dEaD',
+        rolesByNetwork: { ethereum: [], arbitrum: [], polygon: [] }
+      }
+    };
+
+    const OBJECTS = {
+      vault: [
+        { id: 'vault-alpha', name: 'T-Bill Income Vault', address: '0xA1F0...81C2' },
+        { id: 'vault-credit', name: 'Private Credit Vault', address: '0xC9D1...20B7' },
+      ],
+      issuance: [
+        { id: 'asset-usht', name: 'US Treasury Token', address: '0x12A8...7F20' },
+        { id: 'asset-hkcp', name: 'HK Credit Pool Token', address: '0x77D0...A803' },
+      ],
+      functional: [
+        { id: 'adapter-main', name: 'Treasury Yield Adapter', address: '0x4D1A...0EE9' },
+        { id: 'asset-usht', name: 'US Treasury Token', address: '0x12A8...7F20' },
+      ],
+      protocol: [{ id: 'protocol', name: 'HyperTessera Protocol', address: 'Ethereum' }]
+    };
+
+    const ROUTES = {
+      home: '#/home', products: '#/products', access: '#/access', issuance: '#/issuance', vaults: '#/vaults',
+      workspace: '#/workspace/', listing: '#/vault-listing/', opsLogin: '#/ops/login', opsDashboard: '#/ops/dashboard',
+      opsReviews: '#/ops/reviews', opsListings: '#/ops/listings', opsHistory: '#/ops/history'
+    };
+
+    const DEFAULT_STATE = {
+      version: 2,
+      walletSession: { connected: false, network: 'ethereum', walletId: null },
+      opsSession: { authenticated: false, reviewer: '' },
+      activeDomain: 'vault', activeObject: 'vault-alpha', reviewFilter: 'all',
+      vaults: [
+        { id: 'vault-alpha', name: 'T-Bill Income Vault', symbol: 'htTBILL', network: 'Ethereum', asset: 'US Treasury Bills', type: '美国国债策略', nav: '1.0186', apy: '5.18%', tvl: '$42.8M', risk: 'Low', status: 'listed', description: '面向链上资金的短久期美国国债收益策略。', address: '0xA1F0B73102d01f40a92B741988c3Ccb2A14181C2' },
+        { id: 'vault-credit', name: 'Private Credit Vault', symbol: 'htCREDIT', network: 'Ethereum', asset: 'Private Credit', type: '私募信贷策略', nav: '1.0241', apy: '8.42%', tvl: '$18.6M', risk: 'Medium', status: 'suspended', description: '多元化机构私募信贷组合，按月进行估值与结算。', address: '0xC9D182c4109F1a49251260757Bc2D96d163420B7' },
+        { id: 'vault-infra', name: 'Infrastructure Yield Vault', symbol: 'htINFRA', network: 'Arbitrum', asset: 'Infrastructure Debt', type: '基础设施债权', nav: '1.0000', apy: '7.06%', tvl: '$0', risk: 'Medium', status: 'submitted', description: '以基础设施债权为底层资产的长期收益策略。', address: '0x31B7C9dA02fD76b6B0819376D932e24910f54B18' }
+      ],
+      applications: [
+        { id: 'APP-2026-0018', vaultId: 'vault-infra', applicant: 'Alice Operations', submittedAt: '2026-08-02 14:20', updatedAt: '2026-08-02 14:20', status: 'submitted', note: '', productName: 'Infrastructure Yield Vault', summary: '基础设施债权收益策略，面向合格参与者。', documents: ['Risk Disclosure.pdf','Asset Overview.pdf','Operations Manual.pdf'] },
+        { id: 'APP-2026-0012', vaultId: 'vault-alpha', applicant: 'Treasury Desk', submittedAt: '2026-07-28 09:45', updatedAt: '2026-07-29 11:10', status: 'listed', note: '资料完整，产品信息与链上只读快照一致。', productName: 'T-Bill Income Vault', summary: '短久期美国国债收益策略。', documents: ['Risk Disclosure.pdf','Asset Overview.pdf'] },
+        { id: 'APP-2026-0009', vaultId: 'vault-credit', applicant: 'Credit Team', submittedAt: '2026-07-20 16:30', updatedAt: '2026-08-01 18:00', status: 'suspended', note: '等待更新月度估值材料。', productName: 'Private Credit Vault', summary: '机构私募信贷组合。', documents: ['Risk Disclosure.pdf','Monthly NAV.pdf'] }
+      ],
+      activities: [
+        { time: '2026-08-03 09:32', actor: '0x71A4...092C', role: 'Allocator', action: '执行资金分配', object: 'T-Bill Income Vault', status: 'Confirmed' },
+        { time: '2026-08-03 08:18', actor: 'System', role: 'Keeper', action: '处理到期队列', object: 'T-Bill Income Vault', status: 'Confirmed' }
+      ],
+      reviewHistory: [
+        { time: '2026-08-02 14:20', appId: 'APP-2026-0018', action: '提交审核', operator: 'Alice Operations', detail: 'Vault Owner 提交网站上架申请' },
+        { time: '2026-08-01 18:00', appId: 'APP-2026-0009', action: '暂停展示', operator: 'Demo Reviewer', detail: '等待更新月度估值材料' },
+        { time: '2026-07-29 11:10', appId: 'APP-2026-0012', action: '通过并上架', operator: 'Demo Reviewer', detail: '资料完整，产品信息与链上只读快照一致' }
+      ]
+    };
+
+    let state = loadState();
+    let toastTimer;
+
+    function clone(value) { return JSON.parse(JSON.stringify(value)); }
+    function loadState() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+        return saved && saved.version === 2 ? { ...clone(DEFAULT_STATE), ...saved } : clone(DEFAULT_STATE);
+      } catch (error) { return clone(DEFAULT_STATE); }
+    }
+    function saveState() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+    function resetState() { state = clone(DEFAULT_STATE); saveState(); location.hash = ROUTES.home; closeModal(); toast('演示数据已恢复为初始状态'); renderApp(); }
+    function navigate(hash) { if (location.hash === hash) renderApp(); else location.hash = hash; }
+    function currentPath() { return location.hash || ROUTES.home; }
+    function escapeHtml(value = '') { return String(value).replace(/[&<>'"]/g, char => ({ '&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;' }[char])); }
+    function shortAddress(address = '') { return address.length > 14 ? address.slice(0, 7) + '...' + address.slice(-5) : address; }
+    function wallet() { return state.walletSession.connected ? WALLETS[state.walletSession.walletId] : null; }
+    function activeRoles() { const current = wallet(); return current ? (current.rolesByNetwork[state.walletSession.network] || []) : []; }
+    function networkLabel() { return NETWORKS.find(item => item.id === state.walletSession.network)?.label || state.walletSession.network; }
+    function objectFor(roleId, objectId) {
+      const role = ROLE_DEFINITIONS[roleId];
+      const domain = role?.group === 'vault' ? 'vault' : role?.group === 'protocol' ? 'protocol' : role?.group === 'issuance' ? 'issuance' : 'functional';
+      return OBJECTS[domain]?.find(item => item.id === objectId) || OBJECTS[domain]?.[0];
+    }
+    function statusBadge(status) {
+      const map = {
+        listed: ['已上架','success'], submitted: ['待审核','warning'], needs_information: ['待补充','warning'], approved: ['已通过','success'],
+        rejected: ['已驳回','danger'], suspended: ['暂停展示','danger'], delisted: ['已下架','neutral'], draft: ['草稿','neutral'], Confirmed: ['已确认','success']
+      };
+      const [label, tone] = map[status] || [status, 'neutral'];
+      return `<span class="badge ${tone}">${label}</span>`;
+    }
+    function riskBadge(risk) { return `<span class="badge ${risk === 'Low' ? 'success' : 'warning'}">${risk === 'Low' ? '低风险' : '中风险'}</span>`; }
+    function icon(name) {
+      const svg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">';
+      const paths = {
+        users: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+        box: '<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/>',
+        clock: '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
+        activity: '<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>',
+        shield: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
+        check: '<polyline points="20 6 9 17 4 12"/>',
+        wallet: '<path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/>',
+        globe: '<circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>'
+      };
+      return paths[name] ? svg + paths[name] + '</svg>' : '';
+    }
+    function statCard(label, value, foot, iconName, valueStyle = '') {
+      return `<div class="stat card"><div class="stat-head"><div class="stat-label">${label}</div><span class="stat-icon">${icon(iconName)}</span></div><div class="stat-value" style="${valueStyle}">${value}</div><div class="stat-foot">${foot}</div></div>`;
+    }
+    function statusLabel(status) {
+      const map = { listed: '已上架', submitted: '待审核', needs_information: '待补充', approved: '已通过', rejected: '已驳回', suspended: '暂停展示', delisted: '已下架', draft: '草稿', Confirmed: '已确认' };
+      return map[status] || status;
+    }
+    function toast(message) {
+      const element = document.getElementById('toast');
+      element.textContent = message; element.classList.add('show'); clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => element.classList.remove('show'), 2800);
+    }
+    function showModal(content) { document.getElementById('modal-root').innerHTML = `<div class="modal-backdrop" data-close-modal="true"><section class="modal card" role="dialog" aria-modal="true">${content}</section></div>`; }
+    function closeModal() { document.getElementById('modal-root').innerHTML = ''; }
+
+    function publicHeader(active) {
+      const connected = wallet();
+      return `<header class="topbar">
+        <button class="text-button brand" data-route="${ROUTES.home}">Hyper<span>Tessera</span></button>
+        <nav class="topnav" aria-label="主导航">
+          <button class="navlink ${active === 'products' ? 'active' : ''}" data-route="${ROUTES.products}">Products</button>
+          <button class="navlink ${active === 'issuance' ? 'active' : ''}" data-route="${ROUTES.issuance}">资产发行</button>
+          <button class="navlink ${active === 'vaults' ? 'active' : ''}" data-route="${ROUTES.vaults}">资产管理</button>
+          <button class="navlink ${active === 'access' ? 'active' : ''}" data-route="${ROUTES.access}">My Access</button>
+        </nav>
+        <div class="top-actions">
+          <select class="mobile-menu" aria-label="移动导航" data-mobile-nav>
+            <option value="">导航</option>
+            <option value="${ROUTES.products}">Products</option>
+            <option value="${ROUTES.issuance}">资产发行</option>
+            <option value="${ROUTES.vaults}">资产管理</option>
+            <option value="${ROUTES.access}">My Access</option>
+          </select>
+          <select class="network-select" aria-label="当前网络" data-network-select>${NETWORKS.map(item => `<option value="${item.id}" ${item.id === state.walletSession.network ? 'selected' : ''}>${item.label}</option>`).join('')}</select>
+          <button class="text-button" data-open-guide>演示指南</button>
+          <button class="btn secondary wallet-button" data-open-wallet>${connected ? escapeHtml(shortAddress(connected.address)) : '连接钱包'}</button>
+        </div>
+      </header>`;
+    }
+
+    function contextBar(extra = '') {
+      const current = wallet();
+      return `<div class="contextbar card">
+        <div class="context-item"><span>Network</span><strong>${networkLabel()}</strong></div>
+        <div class="context-item"><span>Wallet</span><strong>${current ? escapeHtml(shortAddress(current.address)) : '未连接'}</strong></div>
+        <div class="context-item"><span>Access</span><strong>${current ? activeRoles().length + ' 个角色' : '等待连接'}</strong></div>
+        ${extra}
+      </div>`;
+    }
+
+    function renderHome() {
+      return `${publicHeader('home')}<main class="page">
+        <section class="hero card">
+          <div>
+            <div class="eyebrow">Interactive product demo</div>
+            <h1>从资产发行到 Vault 运营，一套清晰的权限工作流</h1>
+            <p>先选择网络并连接模拟钱包，系统将读取当前账户拥有的角色，只展示可以执行的工作台。Vault 上架审核则使用完全独立的内部账号体系。</p>
+            <div class="hero-actions">
+              <button class="btn" data-open-wallet>${wallet() ? '切换演示账户' : '选择演示账户'}</button>
+              <button class="btn secondary" data-route="${ROUTES.products}">浏览已上架产品</button>
+            </div>
+          </div>
+          <div class="journey" aria-label="演示流程">
+            <div class="journey-step"><span class="step-no">1</span><div><strong>选择网络</strong><span>Ethereum、Arbitrum 或 Polygon</span></div></div>
+            <div class="journey-step"><span class="step-no">2</span><div><strong>连接模拟钱包</strong><span>演示无角色、单角色和多角色账户</span></div></div>
+            <div class="journey-step"><span class="step-no">3</span><div><strong>发现权限</strong><span>只展示当前网络下账户真正拥有的角色</span></div></div>
+            <div class="journey-step"><span class="step-no">4</span><div><strong>进入角色工作台</strong><span>选择业务对象并完成模拟操作</span></div></div>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="section-title"><div><div class="eyebrow">Three clear surfaces</div><h2>三种场景，身份边界互不混淆</h2></div></div>
+          <div class="grid three">
+            <article class="entry-card card"><div class="entry-kicker">公开产品</div><h3>Products</h3><p>访客无需钱包即可浏览已经通过网站审核并上架的 Vault 产品。</p><button class="btn secondary" data-route="${ROUTES.products}">查看 Products</button></article>
+            <article class="entry-card card"><div class="entry-kicker">Web3 用户</div><h3>My Access</h3><p>依据网络、钱包、业务对象和链上角色，生成个性化权限与待办入口。</p><button class="btn secondary" data-route="${ROUTES.access}">进入 My Access</button></article>
+            <article class="entry-card card"><div class="entry-kicker">内部运营</div><h3>Vault 上架审核</h3><p>使用账号密码审核网站展示资料，不连接钱包，也不执行链上交易。</p><button class="btn secondary" data-route="${ROUTES.opsLogin}">进入审核后台</button></article>
+          </div>
+        </section>
+      </main>`;
+    }
+
+    function vaultCard(vault) {
+      return `<article class="vault-card card">
+        <div class="vault-card-main">
+          <div class="vault-card-top"><div><div class="small quiet">${escapeHtml(vault.network)} · ${escapeHtml(vault.symbol)}</div><h3>${escapeHtml(vault.name)}</h3></div>${riskBadge(vault.risk)}</div>
+          <p class="small">${escapeHtml(vault.description)}</p>
+          <div class="vault-metrics"><div class="metric"><span>Indicative APY</span><strong>${vault.apy}</strong></div><div class="metric"><span>TVL</span><strong>${vault.tvl}</strong></div><div class="metric"><span>Asset</span><strong>${escapeHtml(vault.asset)}</strong></div></div>
+          <button class="btn secondary small" data-route="#/products/vault/${vault.id}">查看产品详情</button>
+        </div>
+      </article>`;
+    }
+
+    function renderProducts() {
+      const listed = state.vaults.filter(vault => vault.status === 'listed');
+      return `${publicHeader('products')}<main class="page">
+        <div class="page-head"><div><div class="eyebrow">Products</div><h1>已上架 Vault</h1><p>这里仅展示通过 HyperTessera 网站运营审核的产品。网站上架不代表协议担保，也不改变 Vault 的链上状态。</p></div><div class="row"><button class="btn secondary" data-route="${ROUTES.opsLogin}">审核后台演示</button></div></div>
+        <div class="filterbar card"><div class="field" style="flex:1;min-width:220px"><label for="product-search">搜索</label><input class="input" id="product-search" data-product-search placeholder="Vault 名称、资产或符号"></div><div class="field" style="min-width:180px"><label for="risk-filter">风险等级</label><select class="select" id="risk-filter" data-risk-filter><option value="all">全部</option><option value="Low">低风险</option><option value="Medium">中风险</option></select></div></div>
+        <div id="product-grid" class="grid three">${listed.map(vaultCard).join('') || `<div class="empty card" style="grid-column:1/-1"><h3>暂无已上架产品</h3><p>待审核或已暂停的 Vault 不会出现在这里。</p></div>`}</div>
+      </main>`;
+    }
+
+    function renderProductDetail(vaultId) {
+      const vault = state.vaults.find(item => item.id === vaultId);
+      if (!vault || vault.status !== 'listed') return renderNotFound('该 Vault 当前未在 Products 展示');
+      return `${publicHeader('products')}<main class="page">
+        <button class="text-button" data-route="${ROUTES.products}">返回 Products</button>
+        <div class="page-head" style="margin-top:18px"><div><div class="eyebrow">${escapeHtml(vault.symbol)} · ${escapeHtml(vault.network)}</div><h1>${escapeHtml(vault.name)}</h1><p>${escapeHtml(vault.description)}</p></div><div>${riskBadge(vault.risk)}</div></div>
+        <div class="grid four"><div class="stat card"><div class="stat-label">Indicative APY</div><div class="stat-value">${vault.apy}</div><div class="stat-foot">演示数据</div></div><div class="stat card"><div class="stat-label">TVL</div><div class="stat-value">${vault.tvl}</div><div class="stat-foot">链上只读快照</div></div><div class="stat card"><div class="stat-label">底层资产</div><div class="stat-value" style="font-size:20px">${escapeHtml(vault.asset)}</div><div class="stat-foot">产品披露口径</div></div><div class="stat card"><div class="stat-label">网站状态</div><div class="stat-value" style="font-size:20px">已上架</div><div class="stat-foot">不代表链上许可</div></div></div>
+        <section class="section grid two"><article class="card card-pad"><h3>产品概览</h3><div class="check-list"><div class="check-item"><span class="muted">Vault 地址</span><strong class="mono">${shortAddress(vault.address)}</strong></div><div class="check-item"><span class="muted">结算周期</span><strong>Monthly</strong></div><div class="check-item"><span class="muted">Timelock</span><strong>48 hours</strong></div><div class="check-item"><span class="muted">Gate</span><strong>Eligible participants</strong></div></div></article><article class="card card-pad"><h3>风险与操作</h3><p>收益率、资产估值、流动性和退出时间均可能变化。演示页面不构成投资建议。</p><div class="row wrap"><button class="btn" data-demo-deposit="${vault.id}">模拟 Deposit</button><button class="btn secondary" data-demo-redeem="${vault.id}">模拟 Redeem</button></div></article></section>
+      </main>`;
+    }
+
+    function connectRequired(title) {
+      return `${publicHeader('access')}<main class="page"><div class="page-head"><div><div class="eyebrow">Wallet access</div><h1>${title}</h1><p>先选择网络并连接模拟钱包，系统才会查询该账户在当前网络拥有的对象与角色。</p></div></div>${renderConnectPanel()}</main>`;
+    }
+
+    function renderConnectPanel() {
+      return `<section class="connect-panel card">
+        <div class="connect-copy"><div class="eyebrow">Demo identities</div><h2>选择一个演示账户</h2><p>不同账户展示不同权限组合。切换网络后，角色列表也会随之更新。</p><div class="field"><label for="connect-network" style="color:#c8d7e8">网络</label><select id="connect-network" class="select" data-connect-network>${NETWORKS.map(item => `<option value="${item.id}" ${item.id === state.walletSession.network ? 'selected' : ''}>${item.label}</option>`).join('')}</select></div></div>
+        <div class="account-list">${Object.entries(WALLETS).map(([id, account]) => `<button class="account-option" data-connect-wallet="${id}"><div><strong>${escapeHtml(account.name)}</strong><span class="mono">${escapeHtml(shortAddress(account.address))}</span></div><span class="badge neutral">${(account.rolesByNetwork[state.walletSession.network] || []).length} 个角色</span></button>`).join('')}</div>
+      </section>`;
+    }
+
+    function renderAccess() {
+      if (!wallet()) return connectRequired('My Access');
+      const roles = activeRoles();
+      const grouped = ['vault','issuance','functional','protocol'].map(group => ({ group, roles: roles.filter(id => ROLE_DEFINITIONS[id]?.group === group) })).filter(item => item.roles.length);
+      const groupLabels = { vault:'资产管理角色', issuance:'资产发行角色', functional:'功能身份', protocol:'协议治理角色' };
+      return `${publicHeader('access')}<main class="page">
+        <div class="page-head"><div><div class="eyebrow">My Access</div><h1>当前账户的权限与待办</h1><p>权限列表由当前网络、钱包和业务对象共同决定。未拥有的角色不会显示。</p></div><div class="row"><button class="btn secondary" data-open-wallet>切换账户</button></div></div>
+        ${contextBar()}
+        <div class="grid four"><div class="stat card"><div class="stat-label">可操作角色</div><div class="stat-value">${roles.length}</div><div class="stat-foot">当前网络</div></div><div class="stat card"><div class="stat-label">可操作 Vault</div><div class="stat-value">${roles.some(id => ROLE_DEFINITIONS[id].group === 'vault') ? 2 : 0}</div><div class="stat-foot">对象级权限</div></div><div class="stat card"><div class="stat-label">可操作资产</div><div class="stat-value">${roles.some(id => ROLE_DEFINITIONS[id].group === 'issuance') ? 2 : 0}</div><div class="stat-foot">对象级权限</div></div><div class="stat card"><div class="stat-label">今日待办</div><div class="stat-value">${roles.length ? Math.min(roles.length + 1, 8) : 0}</div><div class="stat-foot">模拟任务</div></div></div>
+        <section class="section grid two">
+          <article class="card card-pad"><div class="section-title"><h3>权限清单</h3><span class="badge neutral">只显示已拥有</span></div>${grouped.length ? grouped.map(item => `<div class="side-label" style="padding-left:0;margin-top:12px">${groupLabels[item.group]}</div><div class="stack">${item.roles.map(id => { const role = ROLE_DEFINITIONS[id]; const obj = objectFor(id); return `<button class="account-option" data-route="#/workspace/${id}/${obj.id}"><div><strong>${role.label}</strong><span>${role.summary}</span></div><span class="badge">进入</span></button>`; }).join('')}</div>`).join('') : `<div class="empty"><h3>当前账户没有角色</h3><p>仍然可以浏览 Products，以及使用 Deposit、Redeem 等无需运营角色的公共功能。</p><button class="btn secondary" data-route="${ROUTES.products}">浏览 Products</button></div>`}</article>
+          <article class="card card-pad"><div class="section-title"><h3>优先待办</h3><span class="badge warning">模拟</span></div>${roles.length ? `<div class="action-list">${roles.slice(0,4).map((id,index) => `<div class="action-row"><div><h4>${ROLE_DEFINITIONS[id].actions[0]}</h4><p>${ROLE_DEFINITIONS[id].label} · ${index === 0 ? '需要今日处理' : '待确认'}</p></div><button class="btn secondary small" data-route="#/workspace/${id}/${objectFor(id).id}">处理</button></div>`).join('')}</div>` : `<div class="empty"><h3>没有角色待办</h3><p>切换到 Alice 多角色账户可查看完整演示。</p></div>`}</article>
+        </section>
+        <section class="section card card-pad"><div class="section-title"><h3>最近 Activity</h3><span class="small quiet">仅展示 Mock 记录</span></div>${activityTable(state.activities.slice(0,5))}</section>
+      </main>`;
+    }
+
+    function activityTable(rows) {
+      return `<div class="table-wrap"><table><thead><tr><th>时间</th><th>角色</th><th>操作</th><th>对象</th><th>状态</th></tr></thead><tbody>${rows.map(row => `<tr><td>${escapeHtml(row.time)}</td><td>${escapeHtml(row.role)}</td><td>${escapeHtml(row.action)}</td><td>${escapeHtml(row.object)}</td><td>${statusBadge(row.status)}</td></tr>`).join('') || `<tr><td colspan="5">暂无记录</td></tr>`}</tbody></table></div>`;
+    }
+
+    function roleSidebar(activeRole, domain, object) {
+      const roles = activeRoles().filter(id => domain === 'vault' ? ROLE_DEFINITIONS[id].group === 'vault' : domain === 'issuance' ? ROLE_DEFINITIONS[id].group === 'issuance' : true);
+      const vault = state.vaults.find(item => item.id === object?.id);
+      return `<aside class="sidebar card">
+        <div class="side-object"><div class="so-label">当前对象</div><strong>${escapeHtml(object?.name || 'HyperTessera Protocol')}</strong><div class="row" style="margin-top:8px">${vault ? statusBadge(vault.status) : '<span class="badge neutral">Active</span>'}<span class="mono quiet small">${escapeHtml(shortAddress(object?.address || ''))}</span></div></div>
+        <div class="side-section"><div class="side-label">业务页面</div><button class="side-link" data-route="${domain === 'vault' ? ROUTES.vaults : domain === 'issuance' ? ROUTES.issuance : ROUTES.access}">业务总览</button><button class="side-link" data-route="${ROUTES.access}">My Access</button></div>
+        <div class="side-section"><div class="side-label">我的角色</div>${roles.map(id => `<button class="side-link ${id === activeRole ? 'active' : ''}" data-route="#/workspace/${id}/${object?.id || objectFor(id).id}">${ROLE_DEFINITIONS[id].label}<small>${ROLE_DEFINITIONS[id].scope}</small></button>`).join('') || `<div class="small muted" style="padding:10px">当前无可用角色</div>`}</div>
+      </aside>`;
+    }
+
+    function vaultManageSection() {
+      const vaultRoles = activeRoles().filter(id => ROLE_DEFINITIONS[id]?.group === 'vault');
+      const rows = OBJECTS.vault.map(obj => {
+        const vault = state.vaults.find(item => item.id === obj.id) || {};
+        return { ...obj, status: vault.status || 'listed', type: vault.type || '—', nav: vault.nav || '—', address: vault.address || obj.address };
+      });
+      const enter = id => `#/workspace/${vaultRoles[0]}/${id}`;
+      return `<section class="section card">
+        <div class="manage-head"><div><h3>管理金库</h3><p class="small" style="margin:4px 0 0">点击金库进入工作台，进入后将列出当前钱包在该金库下的全部角色。</p></div><span class="badge neutral">${vaultRoles.length ? rows.length + ' 个可访问' : '无访问权限'}</span></div>
+        ${vaultRoles.length ? `<div class="table-wrap"><table class="manage-table"><thead><tr><th>金库</th><th>合约地址</th><th>类型</th><th>NAV</th><th>状态</th><th>操作</th></tr></thead><tbody>${rows.map(vault => `<tr><td><button class="table-link" data-route="${enter(vault.id)}"><strong>${escapeHtml(vault.name)}</strong></button><div class="small quiet">${escapeHtml(vault.symbol)} · ${escapeHtml(vault.network)}</div></td><td class="mono small">${escapeHtml(shortAddress(vault.address))}</td><td>${escapeHtml(vault.type)}</td><td class="mono">${escapeHtml(vault.nav)}</td><td>${statusBadge(vault.status)}</td><td><button class="btn small" data-route="${enter(vault.id)}">进入工作台</button></td></tr>`).join('')}</tbody></table></div>` : `<div class="empty"><h3>没有可管理的金库</h3><p>当前账户在该网络下没有 Vault 相关角色。切换账户或网络查看其他权限组合。</p><button class="btn secondary" data-open-wallet>切换账户</button></div>`}
+      </section>`;
+    }
+
+    function renderBusinessHub(domain) {
+      if (!wallet()) return connectRequired(domain === 'vault' ? '资产管理' : '资产发行');
+      const isVault = domain === 'vault';
+      const group = isVault ? 'vault' : 'issuance';
+      const roles = activeRoles().filter(id => ROLE_DEFINITIONS[id].group === group || (!isVault && ROLE_DEFINITIONS[id].group === 'functional'));
+      const objects = isVault ? OBJECTS.vault : OBJECTS.issuance;
+      return `${publicHeader(isVault ? 'vaults' : 'issuance')}<main class="page">
+        <div class="page-head"><div><div class="eyebrow">${isVault ? 'Vault management' : 'Asset issuance'}</div><h1>${isVault ? '资产管理中心' : '资产发行中心'}</h1><p>${isVault ? '管理 Vault 生命周期、策略、结算与资金分配。' : '管理资产注册、Token 发行、储备证明和包装资产。'}</p></div><div class="row"><button class="btn secondary" data-route="${ROUTES.access}">查看全部权限</button></div></div>
+        ${contextBar()}
+        <div class="grid four">
+          ${statCard('我的角色', roles.length, '当前业务域', 'users')}
+          ${statCard('可访问对象', roles.length ? objects.length : 0, '当前网络', 'box')}
+          ${statCard('待处理', roles.length ? roles.length + 1 : 0, '模拟待办', 'clock')}
+          ${statCard('最近操作', state.activities.length, 'Activity', 'activity')}
+        </div>
+        ${isVault ? vaultManageSection() : `<section class="section grid two"><article class="card card-pad"><div class="section-title"><h3>我的资产</h3><span class="badge neutral">${objects.length} 个对象</span></div>${roles.length ? objects.map(obj => `<button class="account-option" data-route="#/workspace/${roles[0]}/${obj.id}"><div><strong>${escapeHtml(obj.name)}</strong><span class="mono">${escapeHtml(obj.address)}</span></div><span class="badge">打开</span></button>`).join('') : `<div class="empty"><h3>没有可操作对象</h3><p>当前账户在此业务域没有角色。</p></div>`}</article><article class="card card-pad"><div class="section-title"><h3>角色入口</h3><span class="badge neutral">动态权限</span></div>${roles.length ? roles.map(id => `<button class="account-option" data-route="#/workspace/${id}/${objectFor(id).id}"><div><strong>${ROLE_DEFINITIONS[id].label}</strong><span>${ROLE_DEFINITIONS[id].summary}</span></div><span class="badge">进入</span></button>`).join('') : `<div class="empty"><h3>没有角色入口</h3><p>切换账户或网络查看其他权限组合。</p><button class="btn secondary" data-open-wallet>切换账户</button></div>`}</article></section>`}
+      </main>`;
+    }
+
+    function renderWorkspace(roleId, objectId) {
+      if (!wallet()) return connectRequired('角色工作台');
+      const role = ROLE_DEFINITIONS[roleId];
+      if (!role || !activeRoles().includes(roleId)) return renderNotFound('当前钱包没有该角色权限');
+      const domain = role.group === 'vault' ? 'vault' : role.group === 'protocol' ? 'protocol' : role.group === 'issuance' ? 'issuance' : 'functional';
+      const object = objectFor(roleId, objectId);
+      const vault = state.vaults.find(item => item.id === object?.id);
+      const relatedActivity = state.activities.filter(item => item.role === role.label || item.object === object?.name).slice(0,5);
+      const backRoute = domain === 'vault' ? ROUTES.vaults : domain === 'issuance' ? ROUTES.issuance : ROUTES.access;
+      const priorityMap = { high: ['高优先级', 'danger'], mid: ['本周内', 'warning'], low: ['稍后', 'neutral'] };
+      const todos = role.actions.slice(0, 3).map((action, index) => ({ action, level: index === 0 ? 'high' : index === 1 ? 'mid' : 'low' }));
+      return `${publicHeader(domain === 'vault' ? 'vaults' : 'issuance')}<main class="page">
+        ${contextBar(`<div class="context-item"><span>Object</span><strong>${escapeHtml(object?.name || 'Protocol')}</strong></div><div class="context-item"><span>Role</span><strong>${role.label}</strong></div>`)}
+        <div class="workspace-shell">${roleSidebar(roleId, domain, object)}<section class="workspace-main stack">
+          <div class="page-head"><div><div class="eyebrow">${role.scope} workspace</div><h1>${role.label}</h1><p>${role.summary}</p></div><div class="row"><span class="badge success">权限已确认</span><button class="btn secondary" data-route="${backRoute}">返回总览</button></div></div>
+          <div class="capability card"><div class="row between wrap"><div class="chips"><span class="chip">${icon('globe')}${networkLabel()}</span><span class="chip">${icon('wallet')}${shortAddress(wallet().address)}</span><span class="chip">${icon('box')}${escapeHtml(object?.name || 'Protocol')}</span><span class="chip">${icon('shield')}${role.label}</span></div><span class="badge neutral">Mock on-chain lookup</span></div></div>
+          <div class="grid four">
+            ${statCard('待办任务', Math.min(role.actions.length + 1, 5), '按紧急度排序', 'clock')}
+            ${statCard('可执行操作', role.actions.length, '当前角色', 'check')}
+            ${statCard('今日交易', relatedActivity.length, 'Mock Activity', 'activity')}
+            ${statCard('对象状态', vault ? statusLabel(vault.status) : 'Active', '只读快照', 'shield', 'font-size:20px')}
+          </div>
+          <div class="workspace-grid">
+            <section class="stack">
+              <article class="card card-pad"><div class="section-title"><h3>可执行操作</h3><span class="badge warning">模拟交易</span></div><div class="action-list">${role.actions.map((action,index) => `<div class="action-row"><div><h4>${action}</h4><p>${index === 0 ? '钱包确认后立即提交' : index === 1 ? '需要钱包确认，可能进入 Timelock' : '提交后记录到 Activity'}</p></div><button class="btn ${index ? 'secondary' : ''}" data-role-action="${roleId}" data-action-name="${escapeHtml(action)}" data-object-id="${object?.id || 'protocol'}">开始操作</button></div>`).join('')}</div></article>
+              ${roleId === 'vault-owner' ? `<article class="card card-pad"><div class="section-title"><div><h3>网站上架</h3><p class="small" style="margin-bottom:0">这是网站运营流程，不属于链上 Vault 权限审批。</p></div></div><button class="btn secondary" data-route="#/vault-listing/${object?.id || 'vault-alpha'}">填写上架申请</button></article>` : ''}
+            </section>
+            <aside class="stack">
+              <article class="card card-pad"><div class="section-title"><h3>待办任务</h3><span class="badge warning">${todos.length} 项</span></div><div class="todo-list">${todos.map(todo => `<div class="todo-item"><span class="badge ${priorityMap[todo.level][1]}">${priorityMap[todo.level][0]}</span><div class="todo-main"><strong>${escapeHtml(todo.action)}</strong><span>${role.label} · ${object?.name || 'Protocol'}</span></div><button class="btn secondary small" data-role-action="${roleId}" data-action-name="${escapeHtml(todo.action)}" data-object-id="${object?.id || 'protocol'}">去处理</button></div>`).join('')}</div></article>
+              <article class="card card-pad"><div class="section-title"><h3>最近 Activity</h3><button class="text-button" data-route="${ROUTES.access}">查看全部</button></div>${relatedActivity.length ? `<div class="mini-timeline">${relatedActivity.map(item => `<div class="mini-timeline-item"><span class="mini-dot"></span><div><div class="row wrap" style="gap:8px"><strong>${escapeHtml(item.action)}</strong>${statusBadge(item.status)}</div><p>${escapeHtml(item.role)} · ${escapeHtml(item.object)}<br>${escapeHtml(item.time)}</p></div></div>`).join('')}</div>` : `<div class="empty" style="padding:26px 10px"><h3>暂无活动</h3><p>在本工作台执行操作后，记录会显示在这里。</p></div>`}</article>
+            </aside>
+          </div>
+        </section></div>
+      </main>`;
+    }
+
+    function renderListingApplication(vaultId) {
+      if (!wallet() || !activeRoles().includes('vault-owner')) return renderNotFound('只有拥有 Vault Owner 角色的演示账户可以提交上架申请');
+      const vault = state.vaults.find(item => item.id === vaultId) || state.vaults[0];
+      const existing = state.applications.find(item => item.vaultId === vault.id);
+      return `${publicHeader('vaults')}<main class="page">
+        <button class="text-button" data-route="#/workspace/vault-owner/${vault.id}">返回 Vault Owner 工作台</button>
+        <div class="page-head" style="margin-top:18px"><div><div class="eyebrow">Website listing application</div><h1>Vault 网站上架申请</h1><p>提交内容供内部运营审核，只控制 Products 是否展示，不修改 Vault 合约状态。</p></div>${existing ? statusBadge(existing.status) : statusBadge('draft')}</div>
+        ${contextBar(`<div class="context-item"><span>Vault</span><strong>${escapeHtml(vault.name)}</strong></div>`)}
+        <form class="card card-pad" id="listing-form" data-vault-id="${vault.id}">
+          <div class="demo-notice">演示版不会上传真实文件，也不会向服务器发送任何内容。</div>
+          <div class="form-grid" style="margin-top:20px"><div class="field"><label for="listing-name">产品展示名称</label><input class="input" id="listing-name" name="productName" value="${escapeHtml(existing?.productName || vault.name)}" required></div><div class="field"><label for="listing-symbol">Vault Symbol</label><input class="input" id="listing-symbol" value="${escapeHtml(vault.symbol)}" disabled></div><div class="field full"><label for="listing-summary">产品简介</label><textarea class="textarea" id="listing-summary" name="summary" required>${escapeHtml(existing?.summary || vault.description)}</textarea></div><div class="field"><label for="listing-risk">风险披露文件</label><input class="input" id="listing-risk" value="Risk Disclosure.pdf" disabled></div><div class="field"><label for="listing-asset">资产说明文件</label><input class="input" id="listing-asset" value="Asset Overview.pdf" disabled></div></div>
+          <div class="divider"></div><div class="row between wrap"><div class="small muted">提交后状态将变为“待审核”，并进入独立 Ops 后台。</div><button class="btn" type="submit">${existing ? '重新提交审核' : '提交审核'}</button></div>
+        </form>
+      </main>`;
+    }
+
+    function renderOpsLogin(error = '') {
+      return `<main class="login-page"><section class="login-card card"><div class="eyebrow">Internal operations demo</div><h1 style="font-size:34px">Vault 上架审核</h1><p>这是独立账号密码制的内部运营后台，不连接钱包，也不执行链上交易。</p><div class="demo-notice">演示账号：reviewer@hypertessera.demo<br>演示密码：Demo2026!</div><form id="ops-login-form" class="stack" style="margin-top:20px"><div class="field"><label for="ops-email">账号</label><input class="input" id="ops-email" name="email" type="email" autocomplete="username" value="reviewer@hypertessera.demo" required></div><div class="field"><label for="ops-password">密码</label><input class="input" id="ops-password" name="password" type="password" autocomplete="current-password" value="Demo2026!" required></div>${error ? `<div class="error-text" role="alert">${escapeHtml(error)}</div>` : ''}<button class="btn" type="submit">登录审核后台</button><button class="btn secondary" type="button" data-route="${ROUTES.home}">返回网站 Demo</button></form></section></main>`;
+    }
+
+    function opsShell(active, content, title) {
+      return `<div class="ops-layout"><aside class="ops-side"><div class="ops-brand">HyperTessera<span class="ops-badge">Vault Review Ops</span></div><div class="side-label">审核运营</div><button class="side-link ${active === 'dashboard' ? 'active' : ''}" data-route="${ROUTES.opsDashboard}">Dashboard</button><button class="side-link ${active === 'reviews' ? 'active' : ''}" data-route="${ROUTES.opsReviews}">审核队列</button><button class="side-link ${active === 'listings' ? 'active' : ''}" data-route="${ROUTES.opsListings}">已上架 Vault</button><button class="side-link ${active === 'history' ? 'active' : ''}" data-route="${ROUTES.opsHistory}">审核历史</button></aside><main class="ops-main"><header class="ops-top"><div><strong>${title}</strong><span class="small quiet" style="margin-left:10px">非链上运营后台</span></div><div class="row"><span class="small muted">${escapeHtml(state.opsSession.reviewer || 'Demo Reviewer')}</span><button class="btn secondary small" data-ops-logout>退出</button></div></header><div class="ops-content">${content}</div></main></div>`;
+    }
+
+    function renderOpsDashboard() {
+      const pending = state.applications.filter(item => item.status === 'submitted').length;
+      const needs = state.applications.filter(item => item.status === 'needs_information').length;
+      const listed = state.vaults.filter(item => item.status === 'listed').length;
+      const content = `<div class="page-head"><div><div class="eyebrow">Operations overview</div><h1 style="font-size:34px">Vault 上架运营</h1><p>审核产品展示资料并控制网站 Products 的可见状态。所有操作仅修改 Demo 数据。</p></div></div><div class="grid four"><div class="stat card"><div class="stat-label">待审核</div><div class="stat-value">${pending}</div><div class="stat-foot">Submitted</div></div><div class="stat card"><div class="stat-label">待补充</div><div class="stat-value">${needs}</div><div class="stat-foot">Needs information</div></div><div class="stat card"><div class="stat-label">已上架</div><div class="stat-value">${listed}</div><div class="stat-foot">Products 可见</div></div><div class="stat card"><div class="stat-label">历史事件</div><div class="stat-value">${state.reviewHistory.length}</div><div class="stat-foot">Audit trail</div></div></div><section class="section card card-pad"><div class="section-title"><h3>需要处理</h3><button class="btn secondary small" data-route="${ROUTES.opsReviews}">查看全部</button></div>${reviewTable(state.applications.filter(item => ['submitted','needs_information'].includes(item.status)).slice(0,5))}</section>`;
+      return opsShell('dashboard', content, 'Dashboard');
+    }
+
+    function reviewTable(applications) {
+      return `<div class="table-wrap"><table><thead><tr><th>申请编号</th><th>Vault</th><th>提交人</th><th>更新时间</th><th>状态</th><th></th></tr></thead><tbody>${applications.map(app => `<tr><td class="mono">${app.id}</td><td><strong>${escapeHtml(app.productName)}</strong></td><td>${escapeHtml(app.applicant)}</td><td>${escapeHtml(app.updatedAt)}</td><td>${statusBadge(app.status)}</td><td><button class="table-link" data-route="#/ops/review/${app.id}">查看审核</button></td></tr>`).join('') || `<tr><td colspan="6">当前筛选条件下没有申请</td></tr>`}</tbody></table></div>`;
+    }
+
+    function renderReviewQueue() {
+      const filter = state.reviewFilter || 'all';
+      const rows = filter === 'all' ? state.applications : state.applications.filter(item => item.status === filter);
+      const content = `<div class="page-head"><div><div class="eyebrow">Review queue</div><h1 style="font-size:34px">Vault 审核队列</h1><p>按状态筛选申请并进入详情核验材料。</p></div></div><div class="filterbar card"><div class="field" style="min-width:220px"><label for="review-filter">申请状态</label><select class="select" id="review-filter" data-review-filter><option value="all" ${filter === 'all' ? 'selected' : ''}>全部</option><option value="submitted" ${filter === 'submitted' ? 'selected' : ''}>待审核</option><option value="needs_information" ${filter === 'needs_information' ? 'selected' : ''}>待补充</option><option value="listed" ${filter === 'listed' ? 'selected' : ''}>已上架</option><option value="rejected" ${filter === 'rejected' ? 'selected' : ''}>已驳回</option></select></div></div><section class="card">${reviewTable(rows)}</section>`;
+      return opsShell('reviews', content, '审核队列');
+    }
+
+    function renderReviewDetail(appId) {
+      const app = state.applications.find(item => item.id === appId);
+      if (!app) return opsShell('reviews', `<div class="empty card"><h3>找不到申请</h3><button class="btn secondary" data-route="${ROUTES.opsReviews}">返回审核队列</button></div>`, '审核详情');
+      const vault = state.vaults.find(item => item.id === app.vaultId);
+      const content = `<button class="text-button" data-route="${ROUTES.opsReviews}">返回审核队列</button><div class="page-head" style="margin-top:14px"><div><div class="eyebrow">${app.id}</div><h1 style="font-size:34px">${escapeHtml(app.productName)}</h1><p>${escapeHtml(app.summary)}</p></div>${statusBadge(app.status)}</div><div class="review-layout"><section class="stack"><article class="card card-pad"><h3>链上只读快照</h3><div class="check-list"><div class="check-item"><span class="muted">Vault 地址</span><strong class="mono">${shortAddress(vault?.address)}</strong></div><div class="check-item"><span class="muted">网络</span><strong>${escapeHtml(vault?.network)}</strong></div><div class="check-item"><span class="muted">底层资产</span><strong>${escapeHtml(vault?.asset)}</strong></div><div class="check-item"><span class="muted">当前链上状态</span><strong>Active</strong></div><div class="check-item"><span class="muted">Timelock</span><strong>48 hours</strong></div></div></article><article class="card card-pad"><h3>申请材料</h3><div class="check-list">${app.documents.map(doc => `<div class="check-item"><span>${escapeHtml(doc)}</span><span class="badge success">已提供</span></div>`).join('')}</div></article><article class="card card-pad"><h3>Products 展示预览</h3>${vaultCard({ ...vault, status:'listed' })}</article></section><aside class="review-actions card card-pad"><h3>审核结论</h3><p class="small">这里的结论只控制网站展示，不写入链上。</p><div class="field"><label for="review-note">审核意见</label><textarea class="textarea" id="review-note" placeholder="填写审核依据或需要补充的材料">${escapeHtml(app.note || '')}</textarea></div><div class="stack" style="margin-top:16px"><button class="btn warning" data-review-action="needs_information" data-app-id="${app.id}">要求补充材料</button><button class="btn danger" data-review-action="rejected" data-app-id="${app.id}">驳回申请</button><button class="btn success" data-review-action="listed" data-app-id="${app.id}">通过并上架到 Products</button></div></aside></div>`;
+      return opsShell('reviews', content, '审核详情');
+    }
+
+    function renderListings() {
+      const rows = state.vaults.filter(item => ['listed','suspended','delisted'].includes(item.status));
+      const content = `<div class="page-head"><div><div class="eyebrow">Website listings</div><h1 style="font-size:34px">已上架 Vault</h1><p>管理网站展示状态。暂停或下架不会改变 Vault 的链上状态。</p></div><button class="btn secondary" data-route="${ROUTES.products}">打开 Products</button></div><section class="card"><div class="table-wrap"><table><thead><tr><th>Vault</th><th>网络</th><th>资产</th><th>网站状态</th><th>操作</th></tr></thead><tbody>${rows.map(vault => `<tr><td><strong>${escapeHtml(vault.name)}</strong><div class="small mono quiet">${shortAddress(vault.address)}</div></td><td>${vault.network}</td><td>${escapeHtml(vault.asset)}</td><td>${statusBadge(vault.status)}</td><td><div class="row wrap">${vault.status === 'listed' ? `<button class="btn warning small" data-listing-action="suspended" data-vault-id="${vault.id}">暂停展示</button><button class="btn secondary small" data-listing-action="delisted" data-vault-id="${vault.id}">下架</button>` : vault.status === 'suspended' ? `<button class="btn success small" data-listing-action="listed" data-vault-id="${vault.id}">恢复展示</button><button class="btn secondary small" data-listing-action="delisted" data-vault-id="${vault.id}">下架</button>` : `<button class="btn success small" data-listing-action="listed" data-vault-id="${vault.id}">重新上架</button>`}</div></td></tr>`).join('')}</tbody></table></div></section>`;
+      return opsShell('listings', content, '已上架 Vault');
+    }
+
+    function renderReviewHistory() {
+      const content = `<div class="page-head"><div><div class="eyebrow">Audit trail</div><h1 style="font-size:34px">审核历史</h1><p>记录所有申请与网站展示状态变化，便于运营追踪。</p></div></div><section class="card card-pad"><div class="timeline">${state.reviewHistory.map(item => `<div class="timeline-item"><div class="timeline-time">${escapeHtml(item.time)}</div><div><div class="row wrap"><strong>${escapeHtml(item.action)}</strong><span class="badge neutral">${escapeHtml(item.appId)}</span></div><p class="small" style="margin:5px 0 0">${escapeHtml(item.operator)} · ${escapeHtml(item.detail)}</p></div></div>`).join('')}</div></section>`;
+      return opsShell('history', content, '审核历史');
+    }
+
+    function renderNotFound(message) {
+      return `${publicHeader('')}<main class="page"><div class="empty card"><div class="eyebrow">Unavailable</div><h1 style="font-size:34px">当前页面不可访问</h1><p>${escapeHtml(message)}</p><div class="row" style="justify-content:center"><button class="btn" data-route="${ROUTES.access}">前往 My Access</button><button class="btn secondary" data-route="${ROUTES.home}">返回首页</button></div></div></main>`;
+    }
+
+    function ensureOps(path) {
+      if (path.startsWith('#/ops/') && path !== ROUTES.opsLogin && !state.opsSession.authenticated) { navigate(ROUTES.opsLogin); return false; }
+      return true;
+    }
+
+    function renderApp() {
+      const path = currentPath();
+      if (!ensureOps(path)) return;
+      let html;
+      if (path === ROUTES.home || path === '#') html = renderHome();
+      else if (path === ROUTES.products) html = renderProducts();
+      else if (path.startsWith('#/products/vault/')) html = renderProductDetail(path.split('/').pop());
+      else if (path === ROUTES.access) html = renderAccess();
+      else if (path === ROUTES.issuance) html = renderBusinessHub('issuance');
+      else if (path === ROUTES.vaults) html = renderBusinessHub('vault');
+      else if (path.startsWith(ROUTES.workspace)) { const parts = path.split('/'); html = renderWorkspace(parts[2], parts[3]); }
+      else if (path.startsWith(ROUTES.listing)) html = renderListingApplication(path.split('/').pop());
+      else if (path === ROUTES.opsLogin) html = state.opsSession.authenticated ? renderOpsDashboard() : renderOpsLogin();
+      else if (path === ROUTES.opsDashboard) html = renderOpsDashboard();
+      else if (path === ROUTES.opsReviews) html = renderReviewQueue();
+      else if (path.startsWith('#/ops/review/')) html = renderReviewDetail(path.split('/').pop());
+      else if (path === ROUTES.opsListings) html = renderListings();
+      else if (path === ROUTES.opsHistory) html = renderReviewHistory();
+      else html = renderNotFound('路由不存在');
+      document.getElementById('root').innerHTML = html;
+      document.title = path.startsWith('#/ops') ? 'HyperTessera · Vault Review Ops' : 'HyperTessera · Interactive Demo';
+      window.scrollTo({ top: 0, behavior: 'instant' });
+    }
+
+    function openWalletModal() {
+      showModal(`<div class="modal-head"><div><div class="eyebrow">Wallet simulation</div><h2>选择网络与演示账户</h2><p class="small">不会连接真实钱包，也不会请求签名。</p></div><button class="close-button" data-close-modal aria-label="关闭">×</button></div><div class="field"><label for="modal-network">网络</label><select class="select" id="modal-network" data-modal-network>${NETWORKS.map(item => `<option value="${item.id}" ${item.id === state.walletSession.network ? 'selected' : ''}>${item.label}</option>`).join('')}</select></div><div class="account-list" id="modal-account-list" style="padding:14px 0 0">${Object.entries(WALLETS).map(([id, account]) => `<button class="account-option" data-connect-wallet="${id}"><div><strong>${escapeHtml(account.name)}</strong><span>${escapeHtml(shortAddress(account.address))}</span></div><span class="badge neutral">${(account.rolesByNetwork[state.walletSession.network] || []).length} 个角色</span></button>`).join('')}</div>${wallet() ? `<button class="btn ghost" style="width:100%;margin-top:8px" data-disconnect-wallet>断开模拟钱包</button>` : ''}`);
+    }
+
+    function openGuide() {
+      showModal(`<div class="modal-head"><div><div class="eyebrow">Demo guide</div><h2>推荐演示顺序</h2></div><button class="close-button" data-close-modal aria-label="关闭">×</button></div><div class="journey" style="background:var(--navy-strong)"><div class="journey-step"><span class="step-no">1</span><div><strong>连接 Alice 账户</strong><span>展示多角色权限和两个业务域</span></div></div><div class="journey-step"><span class="step-no">2</span><div><strong>进入 My Access</strong><span>说明左侧只显示账户拥有的角色</span></div></div><div class="journey-step"><span class="step-no">3</span><div><strong>打开 Vault Owner</strong><span>提交网站上架申请</span></div></div><div class="journey-step"><span class="step-no">4</span><div><strong>登录 Ops 后台</strong><span>审核后观察 Products 同步变化</span></div></div></div><div class="row wrap" style="margin-top:18px"><button class="btn" data-open-wallet>从连接账户开始</button><button class="btn secondary" data-reset-demo>重置演示数据</button></div>`);
+    }
+
+    function openActionModal(roleId, action, objectId) {
+      const role = ROLE_DEFINITIONS[roleId]; const object = objectFor(roleId, objectId);
+      showModal(`<div class="modal-head"><div><div class="eyebrow">Simulated transaction</div><h2>${escapeHtml(action)}</h2><p class="small">${role.label} · ${escapeHtml(object?.name || 'HyperTessera Protocol')}</p></div><button class="close-button" data-close-modal aria-label="关闭">×</button></div><form id="role-action-form" data-role-id="${roleId}" data-action-name="${escapeHtml(action)}" data-object-id="${escapeHtml(objectId)}"><div class="demo-notice">此操作仅生成模拟 Activity，不调用 SDK 或智能合约。</div><div class="field" style="margin-top:16px"><label for="action-value">操作参数</label><input class="input" id="action-value" name="value" value="${action.includes('资金') ? '250000 USDC' : action.includes('NAV') ? '1.0186' : 'Demo value'}" required></div><div class="field" style="margin-top:14px"><label for="action-note">备注</label><textarea class="textarea" id="action-note" name="note" placeholder="说明操作原因">Demo 演示操作</textarea></div><div class="divider"></div><div class="row between wrap"><span class="small muted">提交方式：模拟钱包确认</span><button class="btn" type="submit">确认并模拟提交</button></div></form>`);
+    }
+
+    function connectWallet(walletId) {
+      state.walletSession.connected = true; state.walletSession.walletId = walletId; saveState(); closeModal();
+      toast(`已连接 ${WALLETS[walletId].name}，发现 ${activeRoles().length} 个角色`);
+      if (currentPath().startsWith('#/ops')) navigate(ROUTES.access); else renderApp();
+    }
+
+    function submitRoleAction(form) {
+      const roleId = form.dataset.roleId; const role = ROLE_DEFINITIONS[roleId]; const object = objectFor(roleId, form.dataset.objectId);
+      state.activities.unshift({ time: new Date().toLocaleString('zh-CN', { hour12:false }), actor: shortAddress(wallet().address), role: role.label, action: form.dataset.actionName, object: object?.name || 'HyperTessera Protocol', status: 'Confirmed' });
+      saveState(); closeModal(); toast('模拟交易已确认，并写入 Activity'); renderApp();
+    }
+
+    function submitListing(form) {
+      const vault = state.vaults.find(item => item.id === form.dataset.vaultId); const data = new FormData(form);
+      let app = state.applications.find(item => item.vaultId === vault.id);
+      const timestamp = new Date().toLocaleString('zh-CN', { hour12:false });
+      if (!app) { app = { id:`APP-2026-${String(state.applications.length + 20).padStart(4,'0')}`, vaultId:vault.id, applicant:wallet().name, submittedAt:timestamp, updatedAt:timestamp, status:'submitted', note:'', productName:data.get('productName'), summary:data.get('summary'), documents:['Risk Disclosure.pdf','Asset Overview.pdf'] }; state.applications.unshift(app); }
+      else { Object.assign(app, { updatedAt:timestamp, status:'submitted', note:'', productName:data.get('productName'), summary:data.get('summary') }); }
+      vault.status = 'submitted'; state.reviewHistory.unshift({ time:timestamp, appId:app.id, action:'提交审核', operator:wallet().name, detail:'Vault Owner 提交或重新提交网站上架申请' });
+      saveState(); toast('上架申请已提交到独立 Ops 审核队列'); renderApp();
+    }
+
+    function submitOpsLogin(form) {
+      const data = new FormData(form); const email = data.get('email'); const password = data.get('password');
+      if (email === OPS_CREDENTIALS.email && password === OPS_CREDENTIALS.password) { state.opsSession = { authenticated:true, reviewer:'Demo Reviewer' }; saveState(); navigate(ROUTES.opsDashboard); }
+      else { document.getElementById('root').innerHTML = renderOpsLogin('账号或密码不正确，请使用页面提供的演示凭据。'); }
+    }
+
+    function applyReview(appId, status) {
+      const app = state.applications.find(item => item.id === appId); const vault = state.vaults.find(item => item.id === app.vaultId); const note = document.getElementById('review-note')?.value.trim() || (status === 'listed' ? '资料完整，允许在 Products 展示。' : '请补充审核所需材料。');
+      const timestamp = new Date().toLocaleString('zh-CN', { hour12:false }); app.status = status; app.note = note; app.updatedAt = timestamp; vault.status = status;
+      const actionMap = { listed:'通过并上架', rejected:'驳回申请', needs_information:'要求补充材料' };
+      state.reviewHistory.unshift({ time:timestamp, appId, action:actionMap[status], operator:state.opsSession.reviewer, detail:note }); saveState(); toast(`${actionMap[status]}已记录`); navigate(status === 'listed' ? ROUTES.opsListings : ROUTES.opsReviews);
+    }
+
+    function applyListing(vaultId, status) {
+      const vault = state.vaults.find(item => item.id === vaultId); const app = state.applications.find(item => item.vaultId === vaultId); const timestamp = new Date().toLocaleString('zh-CN', { hour12:false });
+      vault.status = status; if (app) { app.status = status; app.updatedAt = timestamp; }
+      const actionMap = { listed:'恢复或重新上架', suspended:'暂停展示', delisted:'下架' };
+      state.reviewHistory.unshift({ time:timestamp, appId:app?.id || vault.id, action:actionMap[status], operator:state.opsSession.reviewer, detail:`${vault.name} 网站状态更新为 ${status}` }); saveState(); toast('网站展示状态已更新'); renderApp();
+    }
+
+    function filterProducts() {
+      const search = document.querySelector('[data-product-search]')?.value.trim().toLowerCase() || ''; const risk = document.querySelector('[data-risk-filter]')?.value || 'all';
+      const rows = state.vaults.filter(vault => vault.status === 'listed' && (risk === 'all' || vault.risk === risk) && [vault.name,vault.symbol,vault.asset].join(' ').toLowerCase().includes(search));
+      document.getElementById('product-grid').innerHTML = rows.map(vaultCard).join('') || `<div class="empty card" style="grid-column:1/-1"><h3>没有匹配产品</h3><p>调整搜索词或风险筛选条件。</p></div>`;
+    }
+
+    document.addEventListener('click', event => {
+      const route = event.target.closest('[data-route]'); if (route) { navigate(route.dataset.route); return; }
+      if (event.target.closest('[data-open-wallet]')) { closeModal(); openWalletModal(); return; }
+      if (event.target.closest('[data-open-guide]')) { openGuide(); return; }
+      if (event.target.matches('[data-close-modal]')) { closeModal(); return; }
+      const connect = event.target.closest('[data-connect-wallet]'); if (connect) { connectWallet(connect.dataset.connectWallet); return; }
+      if (event.target.closest('[data-disconnect-wallet]')) { state.walletSession = { connected:false, network:state.walletSession.network, walletId:null }; saveState(); closeModal(); toast('模拟钱包已断开'); renderApp(); return; }
+      if (event.target.closest('[data-reset-demo]')) { resetState(); return; }
+      const action = event.target.closest('[data-role-action]'); if (action) { openActionModal(action.dataset.roleAction, action.dataset.actionName, action.dataset.objectId); return; }
+      const review = event.target.closest('[data-review-action]'); if (review) { applyReview(review.dataset.appId, review.dataset.reviewAction); return; }
+      const listing = event.target.closest('[data-listing-action]'); if (listing) { applyListing(listing.dataset.vaultId, listing.dataset.listingAction); return; }
+      if (event.target.closest('[data-ops-logout]')) { state.opsSession = { authenticated:false, reviewer:'' }; saveState(); navigate(ROUTES.opsLogin); return; }
+      const deposit = event.target.closest('[data-demo-deposit]'); if (deposit) { toast('Deposit 为公共功能，演示版未连接真实 Vault'); return; }
+      const redeem = event.target.closest('[data-demo-redeem]'); if (redeem) { toast('Redeem 为公共功能，演示版未连接真实 Vault'); }
+    });
+
+    document.addEventListener('change', event => {
+      if (event.target.matches('[data-mobile-nav]') && event.target.value) { navigate(event.target.value); return; }
+      if (event.target.matches('[data-network-select], [data-connect-network], [data-modal-network]')) { state.walletSession.network = event.target.value; saveState(); if (event.target.matches('[data-modal-network]')) openWalletModal(); else renderApp(); }
+      if (event.target.matches('[data-review-filter]')) { state.reviewFilter = event.target.value; saveState(); renderApp(); }
+      if (event.target.matches('[data-risk-filter]')) filterProducts();
+    });
+    document.addEventListener('input', event => { if (event.target.matches('[data-product-search]')) filterProducts(); });
+    document.addEventListener('submit', event => {
+      event.preventDefault();
+      if (event.target.id === 'role-action-form') submitRoleAction(event.target);
+      if (event.target.id === 'listing-form') submitListing(event.target);
+      if (event.target.id === 'ops-login-form') submitOpsLogin(event.target);
+    });
+    window.addEventListener('hashchange', renderApp);
+    if (!location.hash) location.hash = ROUTES.home; else renderApp();
+  </script>
+</body>
+</html>

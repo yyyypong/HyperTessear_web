@@ -1,0 +1,17 @@
+  workspaces: {
+    roles: workspaceRoleStrings,
+    actions: workspaceActionStrings,
+    capabilities: {
+      available: '鍙墽琛?, readOnly: '鍙', unauthorized: '鏈巿鏉?, wrongNetwork: '缃戠粶閿欒', walletRequired: '闇€瑕佽繛鎺ラ挶鍖?, objectRequired: '璇烽€夋嫨瀵硅薄', targetOnly: '闇€瑕佺洰鏍囧悎绾?/ SDK', paused: '宸叉殏鍋?, invalidState: '褰撳墠鐢熷懡鍛ㄦ湡鐘舵€佷笉鍙墽琛?, unsupportedDeployment: '褰撳墠閮ㄧ讲涓嶆敮鎸?,
+    },
+    badges: { legacyCompatible: '鍏煎鏃х増', target: '鐩爣鐗堟湰' },
+    forms: {
+      fields: workspaceFieldStrings,
+      validation: {
+        required: '姝ゅ瓧娈典负蹇呭～椤广€?, positive: '璇疯緭鍏ュぇ浜庨浂鐨勫€笺€?, nonNegative: '璇疯緭鍏ラ浂鎴栨鏁般€?, future: '璇疯緭鍏ユ湭鏉ユ椂闂淬€?, pastOrPresent: '鏃堕棿涓嶈兘鏅氫簬褰撳墠鏃堕棿銆?, range: '璇疯緭鍏ュ厑璁歌寖鍥村唴鐨勫€笺€?, minLength: '璇疯緭鍏ヨ冻澶熼暱搴︾殑鍐呭銆?, url: '璇疯緭鍏ユ湁鏁堢殑 URL銆?,
+      },
+    },
+    transaction: {
+      prepared: '宸插噯澶?, awaitingWallet: '绛夊緟閽卞寘纭', submitted: '宸叉彁浜?, confirmed: '宸茬‘璁?, signed: '宸茬鍚?, rejected: '宸插湪閽卞寘涓嫆缁?, failed: '澶辫触',
+    },
+  },
