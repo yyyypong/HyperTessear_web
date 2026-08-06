@@ -1,5 +1,5 @@
 import { Contract, keccak256, type Provider, type Signer, type ContractRunner } from "ethers";
-import { getAbi, type ContractName } from './abis';
+import { abiHasFunction, getAbi, type ContractName, type DeploymentProfile } from './abis';
 import {
   ProductState,
   CycleState,
@@ -60,12 +60,15 @@ const TRANCHE_ENUM: Record<TrancheKey, Tranche> = {
  */
 export class HyperTesseraSDK {
   readonly addresses: HyperTesseraAddresses;
+  /** Contract generation this SDK binds to; selects the ABI set. */
+  readonly profile: DeploymentProfile;
   private readonly runner: ContractRunner;
   private readonly contractCache = new Map<string, Contract>();
 
-  constructor(addresses: HyperTesseraAddresses, runner: ContractRunner) {
+  constructor(addresses: HyperTesseraAddresses, runner: ContractRunner, profile: DeploymentProfile = 'legacy') {
     this.addresses = addresses;
     this.runner = runner;
+    this.profile = profile;
   }
 
   /** Returns a typed ethers Contract for any deployed module — full ABI access beyond the curated methods below. */
@@ -75,9 +78,14 @@ export class HyperTesseraSDK {
       const cached = this.contractCache.get(key);
       if (cached) return cached;
     }
-    const contract = new Contract(address, getAbi(name), runner);
+    const contract = new Contract(address, getAbi(name, this.profile), runner);
     if (runner === this.runner) this.contractCache.set(key, contract);
     return contract;
+  }
+
+  /** Whether this deployment's ABI advertises a function — for fail-closed UI. */
+  supportsFunction(name: ContractName, fn: string): boolean {
+    return abiHasFunction(name, fn, this.profile);
   }
 
   // ---------------------------------------------------------------------

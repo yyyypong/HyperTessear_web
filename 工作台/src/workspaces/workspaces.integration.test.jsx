@@ -362,7 +362,7 @@ describe('role workspace delivery integration', () => {
     expect(within(panel).getByRole('button', { name: 'Execute action' })).toBeDisabled();
 
     go(`/workspaces/vault-owner/${vault}`);
-    panel = await expandAction('vault.roles.set');
+    panel = await expandAction('vault.timelock.manage');
     expect(within(panel).getByRole('status')).toHaveTextContent('Requires target contract / SDK');
     expect(within(panel).getByRole('button', { name: 'Execute action' })).toBeDisabled();
     expect(provider.request.mock.calls.filter(([request]) => request.method === 'eth_sendTransaction')).toHaveLength(0);

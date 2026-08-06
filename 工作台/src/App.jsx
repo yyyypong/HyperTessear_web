@@ -21,15 +21,19 @@ import ActivityPage from './workspaces/pages/ActivityPage';
 import PublicWorkspacePage from './workspaces/pages/PublicWorkspacePage';
 import RoleWorkspacePage from './workspaces/pages/RoleWorkspacePage';
 // jett management / role-workspace flow (assets · vaults · workspaces · resources)
-import IssueAssetTokens from './pages/assets/IssueAssetTokens';
-import IssueNewAssetToken from './pages/assets/IssueNewAssetToken';
-import ManageIssuedAssets from './pages/assets/ManageIssuedAssets';
+import IssueHub from './pages/assets/IssueHub';
+import IssueNewAsset from './pages/assets/IssueNewAsset';
+import ManageIssued from './pages/assets/ManageIssued';
+import AssetWorkspace from './pages/assets/AssetWorkspace';
+import MintBurnWorkspace from './pages/assets/MintBurnWorkspace';
 import OracleData from './pages/assets/OracleData';
 import WrapAssetTokens from './pages/assets/WrapAssetTokens';
 import WrapUnwrapAssets from './pages/assets/WrapUnwrapAssets';
 import ManageWrappedAssets from './pages/assets/ManageWrappedAssets';
-import CreateVault from './pages/vaults/CreateVault';
-import ManageVault from './pages/vaults/ManageVault';
+import VaultHub from './pages/vaults/VaultHub';
+import CreateVaultBlueprint from './pages/vaults/CreateVaultBlueprint';
+import ManageVaults from './pages/vaults/ManageVaults';
+import VaultDetail from './pages/vaults/VaultDetail';
 import VaultWorkspace from './pages/workspace/VaultWorkspace';
 import AssetIssuerWorkspace from './pages/workspace/AssetIssuerWorkspace';
 import NavProviderWorkspace from './pages/workspace/NavProviderWorkspace';
@@ -93,17 +97,23 @@ function AppShell() {
               <Route path="/about" element={<About />} />
 
               {/* jett: asset issuance & wrapping */}
-              <Route path="/assets/issue" element={<IssueAssetTokens />} />
-              <Route path="/assets/issue/new" element={<IssueNewAssetToken />} />
-              <Route path="/assets/issue/manage" element={<ManageIssuedAssets />} />
+              <Route path="/assets/issue" element={<IssueHub />} />
+              <Route path="/assets/issue/new" element={<IssueNewAsset />} />
+              <Route path="/assets/issue/manage" element={<ManageIssued />} />
               <Route path="/assets/issue/oracle" element={<OracleData />} />
               <Route path="/assets/wrap" element={<WrapAssetTokens />} />
               <Route path="/assets/wrap/wrap" element={<WrapUnwrapAssets />} />
               <Route path="/assets/wrap/manage" element={<ManageWrappedAssets />} />
+              <Route path="/assets/workspace/:assetId" element={<AssetWorkspace />} />
+              <Route path="/assets/workspace/:assetId/:role" element={<AssetWorkspace />} />
+              <Route path="/assets/mintburn/:assetId" element={<MintBurnWorkspace />} />
 
               {/* jett: vaults */}
-              <Route path="/vaults/create" element={<CreateVault />} />
-              <Route path="/vaults/manage" element={<ManageVault />} />
+              <Route path="/vaults" element={<VaultHub />} />
+              <Route path="/vaults/create" element={<CreateVaultBlueprint />} />
+              <Route path="/vaults/manage" element={<ManageVaults />} />
+              <Route path="/vaults/manage/:vaultAddress" element={<VaultDetail />} />
+              <Route path="/vaults/manage/:vaultAddress/:role" element={<VaultDetail />} />
 
               {/* jett: role workspaces */}
               <Route path="/workspace/vault/:vaultAddress/:role" element={<VaultWorkspace />} />

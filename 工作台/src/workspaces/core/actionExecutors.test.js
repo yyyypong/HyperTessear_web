@@ -140,19 +140,20 @@ describe('action execution', () => {
     expect(transactions.get()).toHaveLength(0);
   });
 
-  test('fails the unsafe legacy PSM signing capability closed before wallet interaction', async () => {
+  test('signs the legacy PSM authorization digest with the bound PSM contract and chain', async () => {
     const adapter = { supports: () => true };
-    const signer = { signMessage: vi.fn() };
+    const signer = { signMessage: vi.fn().mockResolvedValue('0xsignature') };
     const capabilityContext = { ...context(adapter), object: { assetId: 1n } };
     const transactions = createTransactionStore({ storage: null });
-    await expect(executeSignatureAction({
+    const result = await executeSignatureAction({
       action: 'psm.authorization.sign',
       rawInput: { assetId: '1', amount: '1', to: vault, documentId: `0x${'11'.repeat(32)}`, nonce: '0', expiry: '2030-01-01T00:00:00Z' },
       capabilityContext, adapter, signer, transactions,
       signingContext: { chainId: 1, reservePsm, now: 1_700_000_000n },
-    })).rejects.toMatchObject({ capability: { state: 'targetOnly' } });
-    expect(signer.signMessage).not.toHaveBeenCalled();
-    expect(transactions.get()).toHaveLength(0);
+    });
+    expect(signer.signMessage).toHaveBeenCalledOnce();
+    expect(result.signature).toBe('0xsignature');
+    expect(typeof result.digest).toBe('string');
   });
 
   test('binds settlement hashing to an SDK created for the configured Settlement contract', async () => {

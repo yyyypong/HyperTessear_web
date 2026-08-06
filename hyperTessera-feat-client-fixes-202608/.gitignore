@@ -1,0 +1,23 @@
+out/
+cache/
+.DS_Store
+**/.DS_Store
+
+# deploy artifacts (regenerated per run)
+broadcast/
+control-panel/deployments.json
+control-panel/deployments-w3.json
+control-panel/deployments-w4.json
+# control-panel/standalone.html is a committed build artifact (regenerate via bundle.sh)
+
+# secrets
+.env
+
+# offchain (Module E) — TypeScript package build artifacts
+offchain/node_modules/
+offchain/dist/
+# local devnet deploy output (regenerated per run by scripts/local/deploy.ts)
+offchain/local/addresses.json
+
+# local worktrees (agent workspaces)
+.worktrees/

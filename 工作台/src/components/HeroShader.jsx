@@ -7,6 +7,12 @@ import { ChromaFlow, FilmGrain, FlutedGlass, Shader, Swirl } from 'shaders/react
  * bends it around the cursor, fluted glass ribs refract the result, and a
  * film grain pass adds paper tooth so the field doesn't read as flat white.
  *
+ * This is the "elevated" pass: the fluid field is kept quieter and softer
+ * (lower momentum, wider radius, gentler contrast) so the standing CSS
+ * gradient, soft glows and paper-nozzle vignette stay legible beneath the
+ * type. The glass still tracks the cursor, but reads as a calm sheen over
+ * a calm page rather than the hero itself.
+ *
  * Loaded lazily and only where WebGPU exists (see Hero), so browsers
  * without it fall back to the flat paper field with no wasted bytes.
  */
@@ -14,37 +20,41 @@ export default function HeroShader() {
   return (
     <div className="lhero__shader-wrap">
       <Shader className="lhero__shader">
-      <Swirl colorA="#f7f8fa" colorB="#e8eaee" detail={1.45} />
+      {/* base wash: a slightly cooler, deeper tonal bed than before so the
+          highlight ribs have something to catch */}
+      <Swirl colorA="#f6f7fa" colorB="#e4e7ee" detail={1.6} />
 
-      {/* momentum/radius kept low: the cursor wake stays restrained.
-          Blended rather than stacked opaque — baseColor would otherwise
-          flood the swirl beneath, leaving the glass nothing to refract.
-          Greys stay a step darker than the paper so ribs still catch light. */}
+      {/* the cursor wake is now wider and softer — an ambient sheen rather
+          than a travelling blob. Colours step down one tonal band from the
+          paper so the glass still refracts, never floods. */}
       <ChromaFlow
         blendMode="overlay"
-        baseColor="#f0f1f4"
-        downColor="#c5cad3"
-        leftColor="#e4e6eb"
-        rightColor="#9aa3b2"
-        upColor="#fafbfc"
-        momentum={4}
-        radius={2}
+        baseColor="#eef0f5"
+        downColor="#cfd4de"
+        leftColor="#e6e9f0"
+        rightColor="#8f9aad"
+        upColor="#fbfcfe"
+        momentum={3}
+        radius={3.2}
       />
 
+      {/* finer, quieter glass ribs: lower refraction, higher frequency, so
+          the sheen is a fine woven shimmer rather than heavy caustics */}
       <FlutedGlass
-        aberration={0.5}
+        aberration={0.35}
         angle={31}
-        frequency={12}
-        highlight={0.28}
-        highlightSoftness={0.18}
+        frequency={15}
+        highlight={0.22}
+        highlightSoftness={0.24}
         lightAngle={-90}
-        refraction={3.2}
+        refraction={2.4}
         shape="rounded"
-        softness={0.85}
-        speed={0.1}
+        softness={0.9}
+        speed={0.08}
       />
 
-      <FilmGrain strength={0.14} />
+      {/* a whisper more paper tooth than the flat field needs */}
+      <FilmGrain strength={0.16} />
       </Shader>
     </div>
   );

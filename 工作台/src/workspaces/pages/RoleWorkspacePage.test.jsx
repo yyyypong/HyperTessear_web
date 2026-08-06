@@ -82,7 +82,7 @@ async function executeKeeper(actionId = 'lifecycle.open-subscription') {
 }
 
 const expected = {
-  governor: ['governor.members.manage', 'protocol.modules.pause', 'psm.protocol.pause', 'revenue.treasury.set'],
+  governor: ['governor.members.manage', 'protocol.modules.pause', 'psm.protocol.pause', 'revenue.treasury.set', 'nav.signer.manage'],
   'vault-owner': ['vault.roles.set', 'vault.settlement.configure', 'vault.modules.bind', 'vault.adapters.configure', 'vault.timelock.manage', 'vault.owner.transfer'],
   curator: ['vault.fees.set', 'vault.adapters.manage', 'vault.orders.manage', 'vault.data-policy.set'],
   guardian: ['vault.pause', 'vault.order.cancel', 'vault.allocator.freeze', 'vault.timelock.cancel'],
@@ -111,13 +111,13 @@ describe('RoleWorkspacePage', () => {
   });
 
   it('labels target-only actions with the missing target module while preserving legacy badges', async () => {
-    renderRole('curator');
-    await waitFor(() => expect(screen.getAllByTestId('workspace-action')).toHaveLength(expected.curator.length));
-    const target = await expandAction('vault.adapters.manage');
-    expect(within(target).getByText((_, node) => node.classList?.contains('ws-action-panel__detail') && node.textContent.includes('module: AdapterRegistry'))).toBeInTheDocument();
-    expect(within(target).getByText('manageVaultAdapter')).toBeInTheDocument();
+    renderRole('vault-owner');
+    await waitFor(() => expect(screen.getAllByTestId('workspace-action')).toHaveLength(expected['vault-owner'].length));
+    const target = await expandAction('vault.timelock.manage');
+    expect(within(target).getByText((_, node) => node.classList?.contains('ws-action-panel__detail') && node.textContent.includes('module: VaultTimelock'))).toBeInTheDocument();
+    expect(within(target).getByText('manageVaultTimelock')).toBeInTheDocument();
     expect(target.querySelector('.ws-support-badge')).toHaveTextContent('Target');
-    const legacy = await expandAction('vault.fees.set');
+    const legacy = await expandAction('vault.roles.set');
     expect(within(legacy).getByText('Legacy Compatible')).toBeInTheDocument();
     expect(legacy.querySelector('.ws-support-badge')).toHaveTextContent('Legacy Compatible');
   });
@@ -410,7 +410,7 @@ describe('RoleWorkspacePage', () => {
 
   it('keeps action forms collapsed until a summary is opened and only one panel open', async () => {
     renderRole('governor');
-    await waitFor(() => expect(screen.getAllByTestId('workspace-action')).toHaveLength(4));
+    await waitFor(() => expect(screen.getAllByTestId('workspace-action')).toHaveLength(5));
     expect(screen.queryByRole('button', { name: 'Execute action' })).not.toBeInTheDocument();
     await expandAction('protocol.modules.pause');
     expect(screen.getAllByRole('button', { name: 'Execute action' })).toHaveLength(1);

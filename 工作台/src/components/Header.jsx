@@ -142,8 +142,9 @@ export default function Header() {
     { to: '/products/liquidity', label: t.nav.liquidity },
   ];
   const issuanceMenu = [
-    { to: '/assets/issue', label: t.nav.issueAssetTokens },
-    { to: '/assets/wrap', label: t.nav.wrapAssetTokens },
+    { to: '/assets/issue?tab=issue', label: t.nav.issueNewAsset },
+    { to: '/assets/issue?tab=wrap', label: t.nav.wrapOrUnwrap },
+    { to: '/assets/issue?tab=workspace', label: t.nav.roleWorkspace },
   ];
   const managementMenu = [
     { to: '/vaults/create', label: t.nav.createVault },

@@ -17,7 +17,7 @@ import { createSignatureCapabilityAdapter, isBuiltInSignatureAction } from '../c
 import { useTransactions } from '../core/transactionStore';
 import { validateActionInput } from '../core/validators';
 import { getWriteSigner } from '../core/walletRunner';
-import { loadPoolOverview, loadRoleOverview, loadSettlementOverview, loadVaultOverview } from '../core/workspaceQueries';
+import { loadPoolOverview, loadRoleOverview, loadSettlementOverview, loadVaultOverview, loadVaultRoleOverview } from '../core/workspaceQueries';
 import { createCurrentAdapter } from '../sdk/currentAdapter';
 
 const DEPLOYMENT_CHAIN_ID = 97;
@@ -28,6 +28,9 @@ const OPERATIONAL_ROLES = new Set([
 ]);
 const ROLE_IDS = Object.freeze({
   governor: id('GOVERNOR_ROLE'),
+  // The current deployment gates vault-owner administrative calls with the
+  // global Governor role, so the vault-owner workspace authenticates against it.
+  'vault-owner': id('GOVERNOR_ROLE'),
   curator: id('CURATOR_ROLE'),
   guardian: id('GUARDIAN_ROLE'),
   allocator: id('ALLOCATOR_ROLE'),
@@ -38,9 +41,15 @@ const ROLE_IDS = Object.freeze({
   'wrapper-controller': id('GOVERNOR_ROLE'),
   'adapter-data-provider': id('DATA_PROVIDER_ROLE'),
 });
+/**
+ * Roles appointed on the vault itself rather than granted protocol-wide. Their
+ * membership is resolved per vault so the answer stays correct on both the
+ * deployed (global grants) and target (vault-local appointments) contracts.
+ */
+const VAULT_LOCAL_ROLES = new Set(['vault-owner', 'curator', 'guardian', 'allocator', 'keeper']);
 const MODULE_NAMES = Object.freeze(['Cash vault', 'Note vault', 'LP vault', 'Settlement', 'NAV oracle', 'PSM pool', 'Tokenization', 'Reward', 'Claim registry']);
 const PAUSE_MANAGEMENT = new Set(['protocol.modules.pause', 'psm.protocol.pause', 'vault.pause', 'wrapper.asset.pause']);
-const DANGEROUS_ACTIONS = new Set(['governor.members.manage', 'protocol.modules.pause', 'psm.protocol.pause', 'vault.pause', 'vault.owner.transfer', 'vault.timelock.cancel']);
+const DANGEROUS_ACTIONS = new Set(['governor.members.manage', 'protocol.modules.pause', 'psm.protocol.pause', 'vault.pause', 'vault.owner.transfer', 'vault.timelock.cancel', 'vault.roles.set', 'vault.settlement.configure', 'vault.modules.bind', 'vault.adapters.configure', 'nav.signer.manage', 'revenue.treasury.set']);
 
 function canonicalAddress(value) {
   try { return getAddress(value); } catch {
@@ -174,6 +183,8 @@ function actionTarget(actionId, deployment, object) {
   if (actionId === 'protocol.modules.pause') return deployment.addresses.stateManager;
   if (actionId === 'psm.protocol.pause') return deployment.addresses.reservePSM;
   if (actionId === 'revenue.treasury.set') return deployment.addresses.revenuePool;
+  if (actionId === 'vault.settlement.configure') return deployment.addresses.settlement;
+  if (actionId === 'nav.signer.manage') return deployment.addresses.navOracle;
   return null;
 }
 
@@ -219,7 +230,6 @@ function cachedHooks({ roleId, snapshot, account }) {
       return roleId === 'keeper' ? keeperStateAllows(action.id, vaultData.state) : true;
     },
     isAuthorized: async ({ action }) => {
-      if (roleId === 'vault-owner') return false;
       if (roleId === 'asset-owner') {
         if (['asset.register', 'mint.initiate', 'burn.initiate'].includes(action.id)) return roleData?.roles?.[roleId] === true;
         return canonicalAddress(assetData?.asset?.owner) === canonicalAddress(account);
@@ -241,8 +251,9 @@ async function loadSnapshot({ sdk, roleId, account, vault, assetId, signal }) {
   if (vault) work.vault = loadVaultOverview({ sdk, vault, signal });
   if (assetId !== undefined) work.asset = loadAssetOverview({ sdk, assetId, includePsm: ['wrapper-controller', 'psm-authorized-signer'].includes(roleId), signal });
   if (roleId === 'governor') work.roles = loadRoleOverview({ sdk, account, roleIds: ROLE_IDS, signal });
+  else if (VAULT_LOCAL_ROLES.has(roleId) && vault) work.roles = loadVaultRoleOverview({ sdk, account, vault, signal });
   else if (ROLE_IDS[roleId]) work.roles = loadRoleOverview({ sdk, account, roleIds: { [roleId]: ROLE_IDS[roleId] }, moduleIds: [], signal });
-  if (roleId === 'settlement-operator') work.settlement = loadSettlementOverview({ sdk, account, signal });
+  if (roleId === 'settlement-operator') work.settlement = loadSettlementOverview({ sdk, account, vault, signal });
   if (roleId === 'nav-signer' && vault) work.navSigner = loadNavSigner({ sdk, vault, signal });
   if (vault && ['allocator', 'settlement-operator', 'keeper'].includes(roleId)) work.pool = loadPoolOverview({ sdk, vault, signal });
   const entries = await Promise.all(Object.entries(work).map(async ([key, request]) => [key, await request]));
@@ -346,14 +357,20 @@ async function preflightApprovalRequest(sdk, actionId, input, routeAssetId) {
   }
 }
 
-export default function RoleWorkspacePage({ roleId }) {
+export default function RoleWorkspacePage({ roleId, vault, assetId, adapterOverride }) {
   const role = getRoleDefinition(roleId);
   const params = useParams();
   const { t } = useI18n();
   const wallet = useWallet();
   const transactions = useTransactions();
   const deployment = getDeployment(DEPLOYMENT_CHAIN_ID);
-  const selected = routeObject(role, params, t);
+  const mergedParams = {
+    ...params,
+    vault: vault ?? params.vault,
+    assetId: assetId ?? params.assetId,
+    adapter: adapterOverride ?? params.adapter,
+  };
+  const selected = routeObject(role, mergedParams, t);
   const canonicalObject = selected?.field === 'vault' || selected?.field === 'adapter'
     ? canonicalAddress(selected.value)
     : selected?.field === 'assetId' ? canonicalAssetId(selected.value) : selected?.value;
@@ -497,7 +514,6 @@ export default function RoleWorkspacePage({ roleId }) {
           if (result.status !== 'success') throw new Error('settlement authorization unavailable');
           return result.data.operator;
         }
-        if (roleId === 'vault-owner') return false;
         if (roleId === 'asset-owner') {
           if (!['asset.register', 'mint.initiate', 'burn.initiate'].includes(checked.id)) return canonicalAddress((await currentAsset()).asset.owner) === currentAccount;
         }
@@ -728,7 +744,6 @@ export default function RoleWorkspacePage({ roleId }) {
       {invalidObject && <p className="ws-workspace-error" role="alert">{t.workspaces.page.invalidObjectRoute.replace('{label}', selected.label.toLowerCase())}</p>}
       {sdkResult.error && <p className="ws-workspace-error" role="alert">{sdkResult.error}</p>}
       {queryError && <p className="ws-workspace-error" role="alert">{t.workspaces.page.chainDataFailed}</p>}
-      {roleId === 'psm-authorized-signer' && <p className="ws-workspace-error" role="alert">{t.workspaces.page.psmSignerUnavailable}</p>}
       {actions.some(action => PAUSE_MANAGEMENT.has(action.id)) && <p className="ws-pause-exception">{t.workspaces.page.pauseException}</p>}
       {!invalidObject && <StatGrid items={statsFor(roleId, snapshot, t)} />}
       {roleId === 'relayer' && !invalidObject && (

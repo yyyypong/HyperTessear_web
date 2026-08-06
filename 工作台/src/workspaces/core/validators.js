@@ -235,6 +235,10 @@ export function validateActionInput(actionId, rawInput, { now, amountDecimals: d
     if (output.paused && output.reason === undefined) invalid('pauseReasonRequired', 'reason');
     if (!output.paused && output.reason !== undefined) invalid('pauseReasonUnexpected', 'reason');
   }
+  if (actionId === 'vault.settlement.configure') {
+    if (output.operation === 'set-threshold' && output.threshold === undefined) invalid('required', 'threshold');
+    if (output.operation !== 'set-threshold' && output.account === undefined) invalid('required', 'account');
+  }
   if (['settlement.instruction.sign', 'settlement.batch.submit'].includes(actionId)) {
     if (!output.instruction.vaultSettlements.every(item => item.distribution.vault === output.vault)) invalid('vaultMismatch', 'instruction');
     if (actionId === 'settlement.instruction.sign' && output.instruction.validUntil !== output.deadline) invalid('deadlineMismatch', 'deadline');

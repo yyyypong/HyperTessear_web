@@ -186,12 +186,24 @@ describe('signer and relayer workspaces', () => {
     expect(sdk.updateNAV).not.toHaveBeenCalled();
   });
 
-  it('marks legacy PSM signing explicitly unavailable because documentId is not authenticated onchain', async () => {
+  it('PSM Authorized Signer signs the legacy digest and exports a v2 envelope without minting', async () => {
     renderRole('psm-authorized-signer', '7');
     const panel = await expandAction('psm.authorization.sign');
-    await waitFor(() => expect(within(panel).getByRole('button', { name: 'Sign payload' })).toBeDisabled());
-    expect(screen.getByText(/legacy psm.*document/i)).toBeInTheDocument();
-    expect(getWriteSigner).not.toHaveBeenCalled();
+    await waitFor(() => expect(within(panel).getByRole('button', { name: 'Sign payload' })).toBeEnabled());
+    await userEvent.type(panel.querySelector('input[name="assetId"]'), '7');
+    await userEvent.type(panel.querySelector('input[name="amount"]'), '1.25');
+    await userEvent.type(panel.querySelector('input[name="to"]'), to);
+    fireEvent.change(panel.querySelector('input[name="documentId"]'), { target: { value: `0x${'44'.repeat(32)}` } });
+    await userEvent.type(panel.querySelector('input[name="nonce"]'), '9');
+    fireEvent.change(panel.querySelector('input[name="expiry"]'), { target: { value: '2030-01-01T00:00' } });
+    await userEvent.click(within(panel).getByRole('button', { name: 'Sign payload' }));
+    await expandSignatureExport();
+    await userEvent.click(await screen.findByRole('button', { name: 'Export signed payload' }));
+    const envelope = JSON.parse(screen.getByLabelText('Exported signed payload').value);
+    expect(envelope).toMatchObject({
+      version: 2, scheme: ENVELOPE_SCHEME, kind: 'psm', chainId: 97,
+      verifyingContract: addresses.reservePSM, scope: { assetId: '7' }, signer: signingWallet.address,
+    });
     expect(sdk.mintWithAuthorization).not.toHaveBeenCalled();
   });
 

@@ -14,7 +14,7 @@ const GUARDED_PUBLIC_ACTIONS = new Set([
   'request.deposit', 'request.deposit.claim', 'request.redeem', 'request.redeem.claim',
   'request.cancel', 'request.refund.claim', 'wrapper.wrap', 'wrapper.unwrap',
 ]);
-const TASK_6_SIGNATURE_ACTIONS = new Set(['settlement.instruction.sign', 'nav.sign']);
+const TASK_6_SIGNATURE_ACTIONS = new Set(['settlement.instruction.sign', 'nav.sign', 'psm.authorization.sign']);
 const KEEPER_LIFECYCLE = [
   ['lifecycle.open-subscription', 'openSubscription'],
   ['lifecycle.finalize-subscription', 'finalizeSubscription'],
@@ -54,7 +54,7 @@ function writeSdk() {
 
 function escapeSdk() {
   const sdk = writeSdk();
-  sdk.addresses = { hyperAccessControl: 'access', stateManager: 'state', reservePSM: 'psm', assetRegistry: 'assetRegistry', mintBurnController: 'mintBurnController', poRRegistry: 'por', claimRegistry: 'claims', queue: 'queue', cashVault: vault, noteVault: 'noteVault', lpVault: 'lpVault', cashAdapter: adapterAddress, noteAdapter: 'noteAdapter', lpAdapter: lpAdapterAddress, liquidityBridge: 'bridge' };
+  sdk.addresses = { hyperAccessControl: 'access', stateManager: 'state', reservePSM: 'psm', revenuePool: 'revenue', navOracle: 'nav', settlement: 'settlement', assetRegistry: 'assetRegistry', mintBurnController: 'mintBurnController', poRRegistry: 'por', claimRegistry: 'claims', queue: 'queue', cashVault: vault, noteVault: 'noteVault', lpVault: 'lpVault', cashAdapter: adapterAddress, noteAdapter: 'noteAdapter', lpAdapter: lpAdapterAddress, liquidityBridge: 'bridge' };
   sdk.getContract = vi.fn((_name, _address, _signer) => ({ getFunction: vi.fn(name => vi.fn((...args) => ({ name, args }))) }));
   return sdk;
 }
@@ -170,13 +170,14 @@ describe('current SDK adapter', () => {
     expect(sdk.approveMint).toHaveBeenCalledWith(3n, 'agent', signer);
   });
 
-  it('does not advertise or execute the unsafe legacy PSM submit path', async () => {
-    const sdk = writeSdk();
-    const adapter = createCurrentAdapter({ readSdk: sdk, writeSdk: sdk });
-    expect(adapter.supports('psm.authorization.submit', { assetId: 7n })).toBe(false);
-    await expect(adapter.execute('psm.authorization.submit', { assetId: 7n, signer }))
-      .rejects.toThrow('Current SDK method unavailable');
-    expect(sdk.mintWithAuthorization).not.toHaveBeenCalled();
+  it('forwards the validated PSM authorization submit path to mintWithAuthorization', async () => {
+    const sdk = escapeSdk();
+    const adapter = createCurrentAdapter({ readSdk: {}, writeSdk: sdk });
+    expect(adapter.supports('psm.authorization.submit', { assetId: 7n })).toBe(true);
+    const input = { assetId: 7n, amount: 9n, to: 'to', nonce: 1n, expiry: 2n, signature: '0x1234', documentId: '0x5678', signer };
+    const result = await adapter.execute('psm.authorization.submit', input);
+    expect(sdk.getContract).toHaveBeenLastCalledWith('ReservePSM', 'psm', signer);
+    expect(result).toEqual({ name: 'mintWithAuthorization', args: [7n, 9n, 'to', 1n, 2n, '0x1234', '0x5678'] });
   });
 
   it('uses the SDK getContract escape hatch with ABI-verified argument order and validated variants', async () => {

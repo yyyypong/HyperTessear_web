@@ -1,3 +1,5 @@
+import { resolveVaultRoles, usesVaultLocalRoles } from './vaultRoles';
+
 const MODULE_IDS = Object.freeze([0, 1, 2, 3, 4, 5, 6, 7, 8]);
 
 function aborted(signal) {
@@ -46,11 +48,32 @@ export function loadVaultOverview({ sdk, vault, signal, now } = {}) {
   });
 }
 
-export function loadSettlementOverview({ sdk, account, signal, now } = {}) {
+export function loadSettlementOverview({ sdk, account, vault, signal, now } = {}) {
   return load('settlementOverviewUnavailable', { signal, now }, async () => {
+    // The target Settlement scopes operators and thresholds per vault; the
+    // deployed one keeps a single global set.
+    if (usesVaultLocalRoles(sdk)) {
+      const settlement = sdk.settlement;
+      const [operator, threshold] = await Promise.all([
+        settlement.isOperator(vault, account),
+        settlement.threshold(vault),
+      ]);
+      return { operator, threshold, perVault: true };
+    }
     const [operator, threshold] = await Promise.all([sdk.isOperator(account), sdk.threshold()]);
-    return { operator, threshold };
+    return { operator, threshold, perVault: false };
   });
+}
+
+/**
+ * Vault-scoped role membership. On the target contracts these are local
+ * appointments on the vault itself, so a global HyperAccessControl lookup
+ * would answer false for every role except Governor.
+ */
+export function loadVaultRoleOverview({ sdk, account, vault, signal, now } = {}) {
+  return load('roleOverviewUnavailable', { signal, now }, async () => ({
+    roles: await resolveVaultRoles(sdk, vault, account),
+  }));
 }
 
 export function loadRoleOverview({ sdk, account, roleIds = {}, moduleIds = MODULE_IDS, signal, now } = {}) {

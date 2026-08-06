@@ -29,7 +29,7 @@ const REQUIRED_ROLES = [
 ];
 
 const REQUIRED_ACTIONS_BY_ROLE = {
-  governor: ['governor.members.manage', 'protocol.modules.pause', 'psm.protocol.pause', 'revenue.treasury.set'],
+  governor: ['governor.members.manage', 'protocol.modules.pause', 'psm.protocol.pause', 'revenue.treasury.set', 'nav.signer.manage'],
   'vault-owner': ['vault.roles.set', 'vault.settlement.configure', 'vault.modules.bind', 'vault.adapters.configure', 'vault.timelock.manage', 'vault.owner.transfer'],
   curator: ['vault.fees.set', 'vault.adapters.manage', 'vault.orders.manage', 'vault.data-policy.set'],
   guardian: ['vault.pause', 'vault.order.cancel', 'vault.allocator.freeze', 'vault.timelock.cancel'],
@@ -50,6 +50,13 @@ const CURRENT_GET_CONTRACT_MAPPINGS = {
   'governor.members.manage': 'HyperAccessControl.grantRole/revokeRole',
   'protocol.modules.pause': 'StateManager.pauseModule/unpauseModule',
   'psm.protocol.pause': 'ReservePSM.pause/unpause',
+  'revenue.treasury.set': 'RevenuePool.setYieldStrategy',
+  'nav.signer.manage': 'NAVOracle.addAuthorizedSigner/removeAuthorizedSigner',
+  'vault.roles.set': 'BaseVault.setOperator',
+  'vault.settlement.configure': 'Settlement.addOperator/removeOperator/setThreshold',
+  'vault.modules.bind': 'BaseVault.setSettlement/setUnifiedPool/setGate; NAVOracle.addAuthorizedSigner',
+  'vault.adapters.configure': 'BaseVault.addAdapter/removeAdapter',
+  'vault.adapters.manage': 'BaseVault.addAdapter/removeAdapter',
   'vault.fees.set': 'BaseVault.setPerformanceFeeBps/setPerformanceFeeRecipient',
   'vault.orders.manage': 'BaseAdapter.createBuyOrder/createSellOrder/createRebalanceOrder',
   'vault.data-policy.set': 'BaseAdapter.setStalenessWindow',
@@ -77,8 +84,8 @@ const DIRECT_CURRENT_ACTIONS = [
   'settlement.instruction.sign', 'lifecycle.open-subscription', 'lifecycle.finalize-subscription',
   'lifecycle.start-calculation', 'lifecycle.enter-final-settlement', 'lifecycle.enter-maturing',
   'lifecycle.enter-claiming', 'lifecycle.close-product', 'mint.initiate', 'burn.initiate',
-  'mint.approve', 'burn.approve', 'wrapper.deploy', 'nav.sign',
-  'settlement.batch.submit', 'nav.update.submit',
+  'mint.approve', 'burn.approve', 'wrapper.deploy', 'nav.sign', 'psm.authorization.sign',
+  'settlement.batch.submit', 'nav.update.submit', 'psm.authorization.submit',
 ];
 
 function valueAt(object, dottedKey) {
@@ -126,7 +133,7 @@ describe('role registry', () => {
   });
 
   it('maps every normative getContract action to its executable legacy ABI method', () => {
-    expect(Object.keys(CURRENT_GET_CONTRACT_MAPPINGS)).toHaveLength(24);
+    expect(Object.keys(CURRENT_GET_CONTRACT_MAPPINGS)).toHaveLength(31);
     for (const [actionId, adapterMethod] of Object.entries(CURRENT_GET_CONTRACT_MAPPINGS)) {
       expect(ACTION_DEFINITIONS[actionId].capability.legacy).toMatchObject({
         state: CAPABILITY_STATES.AVAILABLE,
@@ -146,7 +153,10 @@ describe('role registry', () => {
   });
 
   it('uses target badges when a legacy mapping is deliberately unavailable', () => {
-    for (const actionId of ['vault.roles.set', 'vault.timelock.manage', 'asset.roles.set', 'psm.authorization.sign', 'psm.authorization.submit', 'vault.timelock.execute']) {
+    // These stay fail-closed on the current deployment: the manifest has no
+    // ProtocolTimelock address, BaseVault exposes no ownership transfer, and
+    // MintBurnController/PoRRegistry expose no per-asset role setters.
+    for (const actionId of ['vault.timelock.manage', 'vault.timelock.cancel', 'vault.timelock.execute', 'vault.owner.transfer', 'asset.roles.set']) {
       expect(ACTION_DEFINITIONS[actionId].capability.legacy).toMatchObject({
         state: CAPABILITY_STATES.TARGET_ONLY,
         badge: 'target',

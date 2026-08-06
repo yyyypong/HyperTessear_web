@@ -227,6 +227,11 @@ function mappedMethods(writeSdk) {
     const callArgs = args(input);
     return invoke(adapterContract(writeSdk, addresses, input), functionName, callArgs);
   };
+  const vaultAdapterWrite = input => invoke(
+    vaultContract(writeSdk, addresses, input),
+    requireBoolean(input.enabled, 'enabled') ? 'addAdapter' : 'removeAdapter',
+    [input.adapter],
+  );
 
   return {
     'lifecycle.open-subscription': directVault('openSubscription', i => [i.vault, i.signer]),
@@ -255,6 +260,61 @@ function mappedMethods(writeSdk) {
     'governor.members.manage': module('HyperAccessControl', () => addresses.hyperAccessControl, i => requireVariant(i.operation, ['grant', 'revoke'], 'operation') === 'grant' ? 'grantRole' : 'revokeRole', i => [i.role, i.account]),
     'protocol.modules.pause': module('StateManager', () => addresses.stateManager, i => requireBoolean(i.paused) ? 'pauseModule' : 'unpauseModule', i => [i.module]),
     'psm.protocol.pause': module('ReservePSM', () => addresses.reservePSM, i => requireBoolean(i.paused) ? 'pause' : 'unpause', () => []),
+    'revenue.treasury.set': module('RevenuePool', () => addresses.revenuePool, () => 'setYieldStrategy', i => [i.treasury]),
+    'nav.signer.manage': input => {
+      requireVariant(input.operation, ['add', 'remove'], 'operation');
+      vaultBinding(addresses, input.vault);
+      // The target oracle keys signers by RWA token (setSigner) rather than by
+      // vault (addAuthorizedSigner), and the current action schema is vault
+      // scoped — surface a clear failure until the schema is updated.
+      if (writeSdk.supportsFunction('NAVOracle', 'setSigner')) {
+        throw new Error('nav.signer.manage targets the RWA-token-keyed NAVOracle; update the action to the token scope');
+      }
+      const functionName = input.operation === 'add' ? 'addAuthorizedSigner' : 'removeAuthorizedSigner';
+      return invoke(contractFor(writeSdk, 'NAVOracle', addresses.navOracle, input.signer), functionName, [input.vault, input.account]);
+    },
+    'vault.roles.set': input => {
+      requireVariant(input.role, ['curator', 'guardian', 'allocator', 'keeper'], 'role');
+      // Target contracts appoint each vault role individually; the deployed
+      // one models all four as a single vault operator.
+      if (writeSdk.supportsFunction('EarnVault', 'setCurator')) {
+        const contract = vaultContract(writeSdk, addresses, input);
+        const fn = input.role === 'keeper' ? 'setKeeper' : `set${input.role[0].toUpperCase()}${input.role.slice(1)}`;
+        const args = input.role === 'keeper'
+          ? [input.account, requireBoolean(input.enabled, 'enabled')]
+          : [input.account];
+        return invoke(contract, fn, args);
+      }
+      return invoke(vaultContract(writeSdk, addresses, input), 'setOperator', [input.account, requireBoolean(input.enabled, 'enabled')]);
+    },
+    'vault.settlement.configure': input => {
+      const operation = requireVariant(input.operation, ['add-operator', 'remove-operator', 'set-threshold'], 'operation');
+      const settlement = contractFor(writeSdk, 'Settlement', addresses.settlement, input.signer);
+      // Target Settlement scopes operators and thresholds per vault.
+      if (writeSdk.supportsFunction('Settlement', 'setOperator')) {
+        const args = operation === 'set-threshold'
+          ? [input.vault, input.threshold]
+          : [input.vault, input.account, operation === 'add-operator'];
+        return invoke(settlement, operation === 'set-threshold' ? 'setThreshold' : 'setOperator', args);
+      }
+      const functionName = operation === 'add-operator' ? 'addOperator' : operation === 'remove-operator' ? 'removeOperator' : 'setThreshold';
+      const args = operation === 'set-threshold' ? [input.threshold] : [input.account];
+      return invoke(settlement, functionName, args);
+    },
+    'vault.modules.bind': input => {
+      const operation = requireVariant(input.operation, ['settlement', 'unified-pool', 'gate', 'nav-signer'], 'operation');
+      if (operation === 'nav-signer') {
+        if (writeSdk.supportsFunction('NAVOracle', 'setSigner')) {
+          throw new Error('vault.modules.bind nav-signer targets the RWA-token-keyed NAVOracle; update the action to the token scope');
+        }
+        return invoke(contractFor(writeSdk, 'NAVOracle', addresses.navOracle, input.signer), 'addAuthorizedSigner', [input.vault, input.contract]);
+      }
+      const functionName = operation === 'settlement' ? 'setSettlement' : operation === 'unified-pool' ? 'setUnifiedPool' : 'setGate';
+      return invoke(vaultContract(writeSdk, addresses, input), functionName, [input.contract]);
+    },
+    'vault.adapters.configure': input => invoke(vaultContract(writeSdk, addresses, input), requireBoolean(input.enabled, 'enabled') ? 'addAdapter' : 'removeAdapter', [input.adapter]),
+    'vault.adapters.manage': input => invoke(vaultContract(writeSdk, addresses, input), requireBoolean(input.enabled, 'enabled') ? 'addAdapter' : 'removeAdapter', [input.adapter]),
+    'psm.authorization.submit': module('ReservePSM', () => addresses.reservePSM, () => 'mintWithAuthorization', i => [i.assetId, i.amount, i.to, i.nonce, i.expiry, i.signature, i.documentId]),
     'vault.fees.set': input => {
       const hasBps = input.feeBps !== undefined;
       const hasRecipient = input.recipient !== undefined;
@@ -310,7 +370,7 @@ const VAULT_SCOPED_DIRECT_METHODS = new Set([
 ]);
 
 const CONTRACT_REQUIREMENTS = Object.freeze({
-  'governor.members.manage': ['hyperAccessControl'], 'protocol.modules.pause': ['stateManager'], 'psm.protocol.pause': ['reservePSM'], 'vault.fees.set': ['cashVault', 'noteVault', 'lpVault'], 'vault.orders.manage': ['cashAdapter', 'noteAdapter', 'lpAdapter'], 'vault.data-policy.set': ['cashAdapter', 'noteAdapter', 'lpAdapter'], 'vault.pause': ['stateManager'], 'vault.order.cancel': ['cashAdapter', 'noteAdapter', 'lpAdapter'], 'vault.allocator.freeze': ['cashAdapter', 'noteAdapter', 'lpAdapter'], 'vault.buy': ['cashAdapter', 'noteAdapter', 'lpAdapter'], 'vault.sell': ['cashAdapter', 'noteAdapter', 'lpAdapter'], 'vault.rebalance': ['cashAdapter', 'noteAdapter', 'lpAdapter'], 'vault.deal.clear': ['cashAdapter', 'noteAdapter', 'lpAdapter'], 'vault.bridge': ['lpAdapter'], 'request.mark-refundable': ['cashVault', 'noteVault', 'lpVault'], 'claim.record': ['claimRegistry'], 'asset.register': ['assetRegistry'], 'asset.metadata.update': ['assetRegistry'], 'asset.owner.transfer': ['assetRegistry'], 'asset.deactivate': ['assetRegistry'], 'proof.publish': ['poRRegistry'], 'wrapper.signer.set': ['reservePSM'], 'wrapper.asset.pause': ['reservePSM'], 'adapter.deal-data.update': ['cashAdapter', 'noteAdapter', 'lpAdapter'],
+  'governor.members.manage': ['hyperAccessControl'], 'protocol.modules.pause': ['stateManager'], 'psm.protocol.pause': ['reservePSM'], 'revenue.treasury.set': ['revenuePool'], 'nav.signer.manage': ['navOracle'], 'vault.roles.set': ['cashVault', 'noteVault', 'lpVault'], 'vault.settlement.configure': ['settlement'], 'vault.modules.bind': ['navOracle'], 'vault.adapters.configure': ['cashVault', 'noteVault', 'lpVault'], 'vault.adapters.manage': ['cashVault', 'noteVault', 'lpVault'], 'psm.authorization.submit': ['reservePSM'], 'vault.fees.set': ['cashVault', 'noteVault', 'lpVault'], 'vault.orders.manage': ['cashAdapter', 'noteAdapter', 'lpAdapter'], 'vault.data-policy.set': ['cashAdapter', 'noteAdapter', 'lpAdapter'], 'vault.pause': ['stateManager'], 'vault.order.cancel': ['cashAdapter', 'noteAdapter', 'lpAdapter'], 'vault.allocator.freeze': ['cashAdapter', 'noteAdapter', 'lpAdapter'], 'vault.buy': ['cashAdapter', 'noteAdapter', 'lpAdapter'], 'vault.sell': ['cashAdapter', 'noteAdapter', 'lpAdapter'], 'vault.rebalance': ['cashAdapter', 'noteAdapter', 'lpAdapter'], 'vault.deal.clear': ['cashAdapter', 'noteAdapter', 'lpAdapter'], 'vault.bridge': ['lpAdapter'], 'request.mark-refundable': ['cashVault', 'noteVault', 'lpVault'], 'claim.record': ['claimRegistry'], 'asset.register': ['assetRegistry'], 'asset.metadata.update': ['assetRegistry'], 'asset.owner.transfer': ['assetRegistry'], 'asset.deactivate': ['assetRegistry'], 'proof.publish': ['poRRegistry'], 'wrapper.signer.set': ['reservePSM'], 'wrapper.asset.pause': ['reservePSM'], 'adapter.deal-data.update': ['cashAdapter', 'noteAdapter', 'lpAdapter'],
 });
 
 function supportsMethod(writeSdk, actionId, input = {}) {

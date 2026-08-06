@@ -1,0 +1,2058 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="HyperTessera PR#12 资产基础设施工作台 · 页面结构与操作流程设计稿">
+  <title>HyperTessera · PR#12 工作台结构设计稿</title>
+  <style>
+    :root {
+      --ink: #13243a; --muted: #607086; --quiet: #8a97a8;
+      --line: #dce3eb; --line-strong: #c8d2df;
+      --canvas: #f3f6f9; --surface: #ffffff; --surface-soft: #f8fafc;
+      --navy: #173f72; --navy-strong: #0c2c52; --navy-soft: #e9f1fb;
+      --success: #19725b; --success-soft: #e7f5f0;
+      --warning: #98601b; --warning-soft: #fff3dc;
+      --danger: #aa3f4c; --danger-soft: #fcebed;
+      --shadow: 0 12px 32px rgba(23,51,80,.08);
+      --radius: 14px; --radius-sm: 9px; --header-h: 70px;
+      font-family: "Segoe UI", "Microsoft YaHei UI", "PingFang SC", sans-serif;
+      color: var(--ink); background: var(--canvas);
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { margin: 0; min-width: 320px; background: var(--canvas); }
+    button, input, select, textarea { font: inherit; }
+    button, a { -webkit-tap-highlight-color: transparent; }
+    button { cursor: pointer; }
+    a { color: inherit; text-decoration: none; }
+    h1, h2, h3, h4, p { margin-top: 0; }
+    h1 { font-size: clamp(30px, 4vw, 48px); line-height: 1.1; letter-spacing: -.035em; }
+    h2 { font-size: clamp(24px, 3vw, 32px); letter-spacing: -.025em; }
+    h3 { font-size: 18px; }
+    p { line-height: 1.65; color: var(--muted); }
+
+    .topbar { position: sticky; top: 0; z-index: 40; height: var(--header-h); display: flex; align-items: center; gap: 20px; padding: 0 max(24px, calc((100vw - 1360px) / 2)); background: rgba(255,255,255,.96); border-bottom: 1px solid var(--line); backdrop-filter: blur(14px); }
+    .brand { font-size: 20px; font-weight: 760; letter-spacing: -.03em; white-space: nowrap; }
+    .brand span { color: var(--navy); }
+    .topnav { display: flex; align-items: center; gap: 4px; flex: 1; }
+    .navlink, .text-button { border: 0; background: transparent; color: var(--muted); border-radius: 8px; padding: 10px 12px; font-weight: 600; white-space: nowrap; }
+    .navlink:hover, .navlink.active, .text-button:hover { color: var(--navy); background: var(--navy-soft); }
+    .top-actions { display: flex; align-items: center; gap: 8px; }
+    .network-select { height: 40px; border: 1px solid var(--line-strong); border-radius: 9px; background: var(--surface); color: var(--ink); padding: 0 30px 0 11px; max-width: 160px; }
+
+    .btn { min-height: 40px; border-radius: 9px; border: 1px solid var(--navy); padding: 9px 15px; background: var(--navy); color: white; font-weight: 700; transition: transform .16s ease, box-shadow .16s ease; }
+    .btn:hover { transform: translateY(-1px); box-shadow: 0 8px 18px rgba(23,63,114,.18); }
+    .btn.secondary { background: var(--surface); color: var(--navy); border-color: var(--line-strong); }
+    .btn.secondary:hover { border-color: var(--navy); box-shadow: none; }
+    .btn.ghost { border-color: transparent; background: transparent; color: var(--muted); }
+    .btn.success { background: var(--success); border-color: var(--success); }
+    .btn.warning { background: var(--warning); border-color: var(--warning); }
+    .btn.danger { background: var(--danger); border-color: var(--danger); }
+    .btn.small { min-height: 34px; padding: 6px 11px; font-size: 13px; }
+    .btn:disabled { cursor: not-allowed; opacity: .45; transform: none; box-shadow: none; }
+    .wallet-button { max-width: 180px; overflow: hidden; text-overflow: ellipsis; }
+
+    .page { max-width: 1360px; margin: 0 auto; padding: 34px 24px 72px; }
+    .page-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; margin-bottom: 26px; }
+    .page-head h1, .page-head h2 { margin-bottom: 8px; }
+    .page-head p { max-width: 760px; margin-bottom: 0; }
+    .eyebrow { color: var(--navy); font-size: 12px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; margin-bottom: 12px; }
+    .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
+    .card-pad { padding: 24px; }
+    .soft { background: var(--surface-soft); box-shadow: none; }
+    .grid { display: grid; gap: 16px; }
+    .grid.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .grid.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .grid.four { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .stack { display: grid; gap: 16px; }
+    .row { display: flex; align-items: center; gap: 12px; }
+    .row.between { justify-content: space-between; }
+    .wrap { flex-wrap: wrap; }
+    .muted { color: var(--muted); }
+    .quiet { color: var(--quiet); }
+    .small { font-size: 13px; }
+    .mono { font-family: Consolas, "SFMono-Regular", monospace; letter-spacing: -.02em; }
+    .divider { height: 1px; background: var(--line); margin: 20px 0; }
+
+    .badge { display: inline-flex; align-items: center; min-height: 26px; padding: 4px 9px; border-radius: 999px; background: var(--navy-soft); color: var(--navy); font-size: 12px; font-weight: 750; }
+    .badge.success { color: var(--success); background: var(--success-soft); }
+    .badge.warning { color: var(--warning); background: var(--warning-soft); }
+    .badge.danger { color: var(--danger); background: var(--danger-soft); }
+    .badge.neutral { color: var(--muted); background: #edf1f5; }
+
+    .hero { min-height: 500px; display: grid; grid-template-columns: 1.12fr .88fr; gap: 44px; align-items: center; padding: 54px; background: var(--navy-strong); color: white; overflow: hidden; }
+    .hero h1 { max-width: 760px; margin-bottom: 20px; }
+    .hero p { color: #c8d7e8; font-size: 17px; max-width: 640px; }
+    .hero .eyebrow { color: #9dc1e9; }
+    .hero-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 28px; }
+    .hero .btn { background: white; border-color: white; color: var(--navy-strong); }
+    .hero .btn.secondary { color: white; background: transparent; border-color: #6686aa; }
+    .journey { padding: 24px; background: #12345e; border: 1px solid #355a83; border-radius: var(--radius); }
+    .journey-step { display: grid; grid-template-columns: 32px 1fr; gap: 12px; padding: 14px 0; border-bottom: 1px solid #355a83; }
+    .journey-step:last-child { border-bottom: 0; }
+    .step-no { width: 28px; height: 28px; display: grid; place-items: center; border: 1px solid #6f91b8; border-radius: 50%; color: white; font-weight: 800; font-size: 12px; }
+    .journey-step strong { display: block; margin-bottom: 3px; }
+    .journey-step span { color: #aebfd3; font-size: 13px; line-height: 1.45; }
+
+    .section { margin-top: 28px; }
+    .section-title { display: flex; justify-content: space-between; gap: 16px; align-items: end; margin-bottom: 14px; }
+    .section-title h2, .section-title h3 { margin-bottom: 0; }
+    .entry-card { padding: 24px; min-height: 190px; display: flex; flex-direction: column; }
+    .entry-card p { flex: 1; }
+    .entry-kicker { color: var(--navy); font-weight: 800; font-size: 13px; margin-bottom: 24px; }
+
+    .stat { padding: 20px; }
+    .stat-label { color: var(--muted); font-size: 13px; font-weight: 650; margin-bottom: 10px; }
+    .stat-value { font-size: 28px; font-weight: 780; letter-spacing: -.035em; }
+    .stat-foot { margin-top: 8px; color: var(--quiet); font-size: 12px; }
+
+    .filterbar { display: flex; flex-wrap: wrap; gap: 10px; padding: 14px; margin-bottom: 16px; }
+    .field { display: grid; gap: 7px; }
+    .field label { font-size: 13px; color: var(--muted); font-weight: 700; }
+    .input, .select, .textarea { width: 100%; min-height: 42px; border: 1px solid var(--line-strong); border-radius: 9px; background: white; padding: 9px 11px; color: var(--ink); outline: none; }
+    .textarea { min-height: 90px; resize: vertical; }
+    .input:focus, .select:focus, .textarea:focus { border-color: var(--navy); box-shadow: 0 0 0 3px var(--navy-soft); }
+    .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 16px; }
+    .field.full { grid-column: 1 / -1; }
+    .error-text { color: var(--danger); font-size: 13px; margin-top: 8px; }
+
+    .account-list { padding: 14px; display: grid; gap: 8px; }
+    .account-option { width: 100%; text-align: left; border: 1px solid var(--line); border-radius: 11px; background: white; padding: 15px; display: flex; justify-content: space-between; gap: 12px; }
+    .account-option:hover { border-color: var(--navy); background: var(--navy-soft); }
+    .account-option strong, .account-option span { display: block; }
+    .account-option span { margin-top: 5px; color: var(--muted); font-size: 12px; }
+    .connect-panel { display: grid; grid-template-columns: 1fr 1.2fr; gap: 24px; align-items: stretch; }
+    .connect-copy { padding: 32px; background: var(--navy-strong); color: white; }
+    .connect-copy p { color: #c8d7e8; }
+
+    .contextbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 12px 15px; margin-bottom: 16px; box-shadow: none; }
+    .context-item { padding-right: 12px; margin-right: 4px; border-right: 1px solid var(--line); }
+    .context-item:last-child { border-right: 0; }
+    .context-item span { display: block; color: var(--quiet); font-size: 10px; text-transform: uppercase; letter-spacing: .08em; }
+    .context-item strong { font-size: 13px; }
+
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; min-width: 720px; }
+    th, td { padding: 13px 14px; text-align: left; border-bottom: 1px solid var(--line); font-size: 13px; vertical-align: middle; }
+    th { color: var(--quiet); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; background: var(--surface-soft); }
+    tr:last-child td { border-bottom: 0; }
+    .table-link { border: 0; background: transparent; color: var(--navy); font-weight: 750; padding: 0; }
+
+    .empty { padding: 48px 24px; text-align: center; }
+    .empty h3 { margin-bottom: 8px; }
+    .empty p { max-width: 520px; margin: 0 auto 20px; }
+
+    .toast { position: fixed; right: 22px; bottom: 22px; z-index: 90; width: min(400px, calc(100vw - 44px)); background: var(--navy-strong); color: white; border-radius: 11px; padding: 14px 16px; box-shadow: 0 18px 50px rgba(10,28,49,.28); opacity: 0; transform: translateY(12px); pointer-events: none; transition: .2s ease; }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .modal-backdrop { position: fixed; inset: 0; z-index: 80; background: rgba(9,25,43,.56); display: grid; place-items: center; padding: 18px; }
+    .modal { width: min(560px, 100%); max-height: calc(100vh - 36px); overflow: auto; padding: 24px; }
+    .modal-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; margin-bottom: 20px; }
+    .modal-head h2, .modal-head h3 { margin-bottom: 6px; }
+    .close-button { border: 0; background: var(--surface-soft); color: var(--muted); border-radius: 8px; width: 36px; height: 36px; font-size: 20px; }
+
+    /* ---- PR#12 设计稿新增组件 ---- */
+    /* 合约调用标签：每个操作按钮旁标注对应的链上函数 */
+    .call-tag { display: inline-block; font-family: Consolas, "SFMono-Regular", monospace; font-size: 11px; color: var(--navy); background: var(--navy-soft); border: 1px solid #d2e2f7; border-radius: 6px; padding: 2px 7px; letter-spacing: -.01em; }
+    .call-tag.plain { color: var(--success); background: var(--success-soft); border-color: #cde9e0; }
+    /* 右侧操作说明面板 */
+    .work-layout { display: grid; grid-template-columns: minmax(0,1fr) 320px; gap: 18px; align-items: start; }
+    .side-panel { position: sticky; top: calc(var(--header-h) + 18px); padding: 20px; }
+    .side-panel h4 { margin: 0 0 12px; font-size: 14px; }
+    .side-panel .kv { display: flex; justify-content: space-between; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
+    .side-panel .kv:last-child { border-bottom: 0; }
+    .side-panel .kv span { color: var(--quiet); white-space: nowrap; }
+    .side-panel .kv strong { text-align: right; font-size: 12.5px; }
+    .side-panel .op-desc { font-size: 12.5px; color: var(--muted); line-height: 1.6; margin-bottom: 14px; }
+    .side-panel .op-alert { padding: 10px 12px; border-radius: 8px; background: var(--warning-soft); color: var(--warning); font-size: 12px; line-height: 1.5; margin-top: 12px; }
+    /* 流程步骤条 */
+    .flowbar { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 10px; }
+    .flowstep { padding: 14px; border-radius: 11px; background: var(--surface-soft); border: 1px solid var(--line); }
+    .flowstep .step-no { width: 24px; height: 24px; border-color: var(--line-strong); color: var(--quiet); margin-bottom: 10px; }
+    .flowstep strong { display: block; font-size: 13px; margin-bottom: 4px; color: var(--muted); }
+    .flowstep span { font-size: 11.5px; color: var(--quiet); line-height: 1.5; display: block; }
+    .flowstep.done { background: var(--success-soft); border-color: #cde9e0; }
+    .flowstep.done .step-no { border-color: var(--success); color: var(--success); }
+    .flowstep.done strong { color: var(--success); }
+    .flowstep.current { background: var(--navy-soft); border-color: #c4d9f5; }
+    .flowstep.current .step-no { border-color: var(--navy); color: var(--navy); }
+    .flowstep.current strong { color: var(--navy); }
+    /* 双签请求列表 */
+    .req-list { display: grid; gap: 10px; }
+    .req-item { padding: 16px; border: 1px solid var(--line); border-radius: 11px; background: var(--surface); display: flex; justify-content: space-between; gap: 14px; align-items: center; }
+    .req-item .req-main h4 { margin: 0 0 4px; font-size: 14px; }
+    .req-item .req-main p { margin: 0; font-size: 12.5px; }
+    .req-state { display: inline-flex; align-items: center; min-height: 24px; padding: 3px 9px; border-radius: 999px; font-size: 12px; font-weight: 750; }
+    .req-state.pending { color: var(--warning); background: var(--warning-soft); }
+    .req-state.approved { color: var(--success); background: var(--success-soft); }
+    /* 蓝图页 */
+    .sitemap-grid { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 16px; }
+    .sitemap-card { padding: 18px; display: flex; flex-direction: column; gap: 8px; }
+    .sitemap-card .route { font-family: Consolas, "SFMono-Regular", monospace; font-size: 11px; color: var(--quiet); }
+    .sitemap-card h4 { margin: 0; font-size: 15px; }
+    .sitemap-card p { margin: 0; font-size: 12.5px; flex: 1; }
+    .edge-list { display: grid; gap: 8px; }
+    .edge-row { display: grid; grid-template-columns: minmax(0,1fr) auto minmax(0,1fr); gap: 8px; align-items: center; padding: 10px 12px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface); font-size: 12.5px; }
+    .edge-row .edge-from, .edge-row .edge-to { font-weight: 700; color: var(--navy); }
+    .edge-row .edge-via { color: var(--quiet); font-size: 11.5px; text-align: center; }
+    .edge-row .edge-cond { grid-column: 1 / -1; color: var(--muted); font-size: 11.5px; padding-top: 2px; }
+    .role-chip { display: inline-block; padding: 2px 8px; border-radius: 6px; background: var(--navy-soft); color: var(--navy); font-size: 11px; font-weight: 750; }
+    .role-chip.open { background: var(--success-soft); color: var(--success); }
+
+    /* ---- 顶部 hover 下拉导航（资产发行 / 资产管理 大模块） ---- */
+    .navmenu { position: relative; }
+    .navmenu__trigger { display: inline-flex; align-items: center; gap: 6px; }
+    .navmenu__chev { transition: transform .16s ease; opacity: .75; }
+    .navmenu:hover .navmenu__chev, .navmenu.open .navmenu__chev { transform: rotate(180deg); }
+    .navmenu__panel { position: absolute; top: calc(100% + 12px); left: 50%; transform: translateX(-50%) translateY(8px); min-width: 520px; padding: 10px 10px 8px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 20px 48px rgba(23,51,80,.16); opacity: 0; visibility: hidden; transition: opacity .16s ease, transform .16s ease, visibility .16s; z-index: 60; }
+    .navmenu:hover .navmenu__panel, .navmenu:focus-within .navmenu__panel, .navmenu.open .navmenu__panel { opacity: 1; visibility: visible; transform: translateX(-50%) translateY(0); }
+    .navmenu__grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 14px; }
+        .navmenu__grid--single { grid-template-columns: 1fr; min-width: 340px; }
+    .navmenu__group-label { padding: 9px 12px 5px; font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--quiet); }
+    .navmenu__item { display: block; width: 100%; text-align: left; border: 0; border-radius: 9px; background: transparent; padding: 9px 12px; }
+    .navmenu__item:hover { background: var(--navy-soft); }
+    .navmenu__item.active { background: var(--navy-soft); }
+    .navmenu__item strong { display: block; font-size: 13.5px; color: var(--ink); }
+    .navmenu__item span { display: block; font-size: 12px; color: var(--muted); margin-top: 2px; line-height: 1.45; }
+    .navmenu__item .call-tag { margin-top: 5px; }
+    .navmenu__foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 12px 2px; margin-top: 6px; border-top: 1px solid var(--line); }
+    .navmenu__foot button { border: 0; background: transparent; color: var(--navy); font-weight: 750; font-size: 12.5px; padding: 4px 0; }
+    .navmenu__foot button:hover { text-decoration: underline; }
+
+    /* ---- 子页面分组切换（发行 | 管理） ---- */
+    .subnav { display: inline-flex; gap: 4px; padding: 4px; background: var(--surface); border: 1px solid var(--line); border-radius: 11px; margin-bottom: 22px; box-shadow: var(--shadow); }
+    .subnav button { border: 0; border-radius: 8px; padding: 8px 18px; background: transparent; color: var(--muted); font-weight: 700; font-size: 13px; }
+    .subnav button:hover { color: var(--navy); }
+    .subnav button.active { background: var(--navy); color: white; }
+
+    /* ---- 模块选择卡片（发行 / 管理中心） ---- */
+    .module-card { position: relative; padding: 24px; display: flex; flex-direction: column; gap: 4px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease; }
+    .module-card:hover { transform: translateY(-2px); border-color: var(--navy); box-shadow: 0 18px 40px rgba(23,51,80,.12); }
+    .module-card .module-no { width: 32px; height: 32px; border-radius: 9px; display: grid; place-items: center; background: var(--navy); color: white; font-weight: 800; font-size: 12.5px; margin-bottom: 14px; letter-spacing: .03em; }
+    .module-card .module-no.soft { background: var(--navy-soft); color: var(--navy); }
+    .module-card h3 { margin: 0 0 4px; font-size: 17px; }
+    .module-card p { margin: 0 0 18px; font-size: 13px; flex: 1; }
+    .module-card .module-route { position: absolute; top: 24px; right: 24px; }
+    .module-card .module-actions { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+
+    /* ---- 角色工作台双栏布局（业务页面 / 我的角色 + 操作区） ---- */
+    .workspace-shell { display: grid; grid-template-columns: 276px minmax(0,1fr); gap: 18px; align-items: start; }
+    .sidebar { position: sticky; top: calc(var(--header-h) + 16px); padding: 14px; max-height: calc(100vh - var(--header-h) - 32px); overflow: auto; }
+    .side-section { margin-bottom: 18px; }
+    .side-section:last-child { margin-bottom: 0; }
+    .side-label { padding: 6px 9px; font-size: 11px; font-weight: 800; color: var(--quiet); text-transform: uppercase; letter-spacing: .09em; }
+    .side-link { width: 100%; display: block; text-align: left; border: 0; background: transparent; color: var(--muted); padding: 10px 9px; border-radius: 8px; font-weight: 650; margin: 2px 0; transition: background .14s ease, color .14s ease; }
+    .side-link:hover, .side-link.active { background: var(--navy-soft); color: var(--navy); }
+    .side-link small { display: block; margin-top: 4px; font-weight: 500; color: var(--quiet); }
+    .side-link.active small { color: var(--navy); }
+    .workspace-main { min-width: 0; }
+    .capability { padding: 18px 20px; border-left: 4px solid var(--navy); box-shadow: none; }
+    .action-list { display: grid; gap: 2px; }
+    .action-row { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 16px; align-items: center; padding: 16px 14px; border-bottom: 1px solid var(--line); border-radius: 10px; transition: background .14s ease; }
+    .action-row:last-child { border-bottom: 0; }
+    .action-row:hover { background: var(--surface-soft); }
+    .action-row h4 { margin: 0 0 5px; }
+    .action-row p { margin: 0; font-size: 13px; }
+    /* stat 卡小图标（更友好的视觉层级） */
+    .stat .stat-label { display: flex; align-items: center; gap: 6px; }
+    .stat .stat-label .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--navy); opacity: .55; flex: none; }
+    .stat .stat-label .dot.success { background: var(--success); }
+    .stat .stat-label .dot.warning { background: var(--warning); }
+    /* 表格行 hover 与状态微交互 */
+    tbody tr { transition: background .14s ease; }
+    tbody tr:hover { background: var(--surface-soft); }
+    .table-link { transition: color .14s ease; }
+    .table-link:hover { text-decoration: underline; }
+    /* ---- 标签页切换（发行 / 包装/解包装 / 工作台） ---- */
+    .tab-nav { display: flex; gap: 4px; padding: 4px; background: var(--surface-soft); border: 1px solid var(--line); border-radius: 11px; margin-bottom: 20px; box-shadow: var(--shadow); }
+    .tab-btn { flex: 1; border: 0; background: transparent; color: var(--muted); padding: 10px 16px; border-radius: 9px; font-weight: 650; font-size: 14px; transition: .15s; cursor: pointer; text-align: center; }
+    .tab-btn.active { background: white; color: var(--navy); box-shadow: 0 2px 8px rgba(0,0,0,.06); }
+    .tab-btn:hover:not(.active) { color: var(--ink); background: #edf1f5; }
+
+    /* 提示条：进入金库后按角色操作的引导 */
+    .hintbar { display: flex; align-items: center; gap: 10px; padding: 12px 15px; margin-bottom: 16px; background: var(--navy-soft); border: 1px solid #c4d9f5; border-radius: 11px; font-size: 13px; color: var(--navy); box-shadow: none; }
+
+    @media (max-width: 1180px) { .sitemap-grid { grid-template-columns: repeat(2, minmax(0,1fr)); } }
+    @media (max-width: 1020px) {
+      .topnav { display: none; }
+      .topbar { gap: 12px; }
+      .brand { flex: 1; }
+      .hero { grid-template-columns: 1fr; padding: 42px; }
+      .grid.four { grid-template-columns: repeat(2, minmax(0,1fr)); }
+      .grid.three { grid-template-columns: repeat(2, minmax(0,1fr)); }
+      .work-layout { grid-template-columns: 1fr; }
+      .side-panel { position: static; }
+      .flowbar { grid-template-columns: repeat(2, minmax(0,1fr)); }
+      .workspace-shell { grid-template-columns: 1fr; }
+      .sidebar { position: static; max-height: none; }
+    }
+    @media (max-width: 760px) {
+      .topbar { padding: 0 16px; }
+      .brand { font-size: 17px; }
+      .network-select { display: none; }
+      .wallet-button { max-width: 124px; }
+      .page { padding: 24px 16px 60px; }
+      .page-head { display: block; }
+      .page-head .row { margin-top: 16px; }
+      .hero { min-height: 0; padding: 32px 24px; gap: 28px; }
+      .grid.two, .grid.three, .sitemap-grid { grid-template-columns: 1fr; }
+      .connect-panel { grid-template-columns: 1fr; }
+      .form-grid { grid-template-columns: 1fr; }
+      .field.full { grid-column: auto; }
+      .flowbar { grid-template-columns: 1fr; }
+      .edge-row { grid-template-columns: 1fr; }
+      .edge-row .edge-via { display: none; }
+    }
+    @media (max-width: 640px) {
+      .top-actions .text-button { display: none; }
+      .grid.four { grid-template-columns: 1fr; }
+      .hero-actions .btn { width: 100%; }
+      .req-item { flex-direction: column; align-items: stretch; }
+      .req-item .btn { width: 100%; }
+      .action-row { grid-template-columns: 1fr; gap: 8px; }
+      .action-row .btn { width: 100%; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <div id="modal-root"></div>
+
+  <script>
+    'use strict';
+    // =====================================================================
+    //  HyperTessera · PR#12 工作台结构与流程设计稿
+    //  —— 纯 HTML 原型：验证页面层级、点击跳转与合约操作流程 ——
+    //  路由与 webpage/工作台 React 实现对齐：#/assets/*、#/vaults/*、#/workspaces/*
+    // =====================================================================
+
+    const STORAGE_KEY = 'hypertessera_pr12_blueprint';
+    const EXPLORER = 'https://testnet.bscscan.com';
+
+    // ---------- BNB Testnet (97) 真实部署地址（deployments.js） ----------
+    const DEPLOY = {
+      hyperAccessControl: '0x9bbefE25f656732015969778dF26e104D2394Bb8',
+      stateManager: '0x2a9bb2053dD14b36652f1F6Bc2511b3Eb31b1DCd',
+      navOracle: '0x009F0F9507E4e3Fda5159e85fa2f6c19875A3154',
+      mintBurnController: '0x563f4C2e62B4917860a4435Da0bF6615648aF28e',
+      assetRegistry: '0x50222D8849f44F90fCd911fC5f36387Db8EAD429',
+      reservePSM: '0x67D10e814B57E381cE020697eF14CCDf922Dd654',
+      poRRegistry: '0x581A7604f9429fF52fa378f2548c28B817e68d17',
+      settlement: '0x11df11aC61D5Aa880Fd17A0cf50Be0C22277916c',
+      vaultFactory: '0x63089ad3826ee02f95819e4c0d10C1080a131a0D',
+      queue: '0xCAd26BEF4ef0E71d2d54b11C1930df2F37bB1080',
+      liquidityBridge: '0x7800eBf939427bA561d2d7Ff5Bf6393730A9E101',
+      cashVault: '0xe0FDa7F2572c5B98D3B82DB50685A8F3685D20ea',
+      mockUSDT: '0x66924eC2539ab478aba1112428cD6979baDa6bC6',
+      // Deploy.s.sol L303：new AdapterRegistry(governor)，正式版从部署输出/SDK 回填（VaultParams.adapterRegistry 必填）
+      adapterRegistry: '0x8aAaCCcCdDdEeEfFf00011122233344455566677'
+    };
+
+    const NETWORKS = [
+      { id: 'ethereum', label: 'Ethereum' },
+      { id: 'bnb', label: 'BNB Chain' },
+      { id: 'bnb-testnet', label: 'BNB Testnet' }
+    ];
+
+    // ---------- 角色定义（对齐 15 个角色，映射 PR#12 合约权限） ----------
+    // 域划分：vault(6) 资产管理 / issuance(4) 资产发行 / functional(4) 功能身份 / protocol(1)
+    const ROLES = {
+      'asset-owner': { label: 'Asset Owner / Issuer', group: 'issuance', scope: 'Asset', contract: 'AssetRegistry / MintBurnController.initiateMint/Burn', summary: '注册者即 owner（ownerOf(assetId)）；管理元数据、转移所有权、停用资产，并作为 Issuer 发起 initiateMint / initiateBurn。', actions: ['更新元数据哈希', '发起 Mint / Burn 申请', '转移资产所有权', '停用资产'] },
+      'token-agent': { label: 'Token Agent', group: 'issuance', scope: 'Asset', contract: 'MintBurnController.approveMint/Burn', summary: '资产 owner 通过 setTokenAgent 任命，负责 approveMint / approveBurn 第二签名。', actions: ['批准 Mint', '批准 Burn', '查看发行限额'] },
+      'proof-publisher': { label: 'Proof Publisher', group: 'issuance', scope: 'Asset', contract: 'PoRRegistry.publishReserveProof', summary: '资产 owner 可直接发布储备证明，也可通过 setProofPublisher 任命专用发布地址。', actions: ['发布储备证明', '更新证明引用'] },
+      'wrapper-controller': { label: 'Wrapper Controller', group: 'issuance', scope: 'Wrapped Asset', contract: 'ReservePSM.deployWrappedToken / pauseAsset / setAuthorizedSigner', summary: 'deployWrappedToken 部署者；管理包装资产参数、暂停状态与授权签名人。', actions: ['部署包装代币', '暂停 / 恢复包装', '设置授权签名人'] },
+      'nav-signer': { label: 'NAV Signer', group: 'functional', scope: 'Asset', contract: 'NAVOracle.updateNAV', summary: 'NAVOracle owner 通过 setSigner 任命；对 NAVUpdate 做 EIP-712 签名并提交。', actions: ['创建 NAV 签名', '提交 NAV 更新'] },
+      'adapter-data-provider': { label: 'Adapter Data Provider', group: 'functional', scope: 'Adapter', contract: 'CreditAdapter.updateDealData（DATA_PROVIDER_ROLE）', summary: '链外业务数据上报地址，更新 Adapter 依赖的 deal 数据与有效期。', actions: ['提交外部数据', '更新数据有效期'] },
+      'psm-authorized-signer': { label: 'PSM Authorized Signer', group: 'functional', scope: 'Asset', contract: 'ReservePSM.mintWithAuthorization', summary: 'Wrapper Controller 通过 setAuthorizedSigner 任命，为 Document Proof 模式生成铸币授权签名。', actions: ['签署铸币授权', '查看授权状态'] },
+      'relayer': { label: 'Relayer', group: 'functional', scope: 'Protocol', contract: 'Offchain Relayer', summary: '转发已授权消息并跟踪跨系统交付状态。', actions: ['转发授权消息', '重试失败消息'] },
+      'vault-owner': { label: 'Vault Owner', group: 'vault', scope: 'Vault', contract: 'VaultFactory.deployVault（结果身份）', summary: '通过官方 VaultFactory 部署金库后自动成为 Owner，管理金库角色与上架申请。', actions: ['管理金库角色', '发起网站上架申请'] },
+      'curator': { label: 'Curator', group: 'vault', scope: 'Vault', contract: 'BaseVault（IVaultRoles）', summary: '由 Vault Owner 通过 setCurator 任命；配置策略与费用。', actions: ['添加 Adapter', '调整策略上限'] },
+      'guardian': { label: 'Guardian', group: 'vault', scope: 'Vault', contract: 'BaseVault（GUARDIAN_ROLE）', summary: '执行紧急保护、取消待执行变更并降低风险。', actions: ['暂停新存款', '取消待执行变更'] },
+      'allocator': { label: 'Allocator', group: 'vault', scope: 'Vault', contract: 'LiquidityBridge（ALLOCATOR_ROLE）', summary: '在已批准范围内执行资金分配与再平衡。', actions: ['执行资金分配', '发起再平衡'] },
+      'settlement-operator': { label: 'Settlement Operator', group: 'vault', scope: 'Vault', contract: 'Settlement（SETTLEMENT_ROLE）', summary: '生成结算批次、核对请求并提交结算签名。', actions: ['创建结算批次', '提交结算结果'] },
+      'keeper': { label: 'Keeper', group: 'vault', scope: 'Vault', contract: 'BaseVault（KEEPER_ROLE）', summary: '执行周期推进和自动化维护任务。', actions: ['推进生命周期', '处理到期队列'] },
+      'governor': { label: 'Governor', group: 'protocol', scope: 'Protocol', contract: 'HyperAccessControl（GOVERNOR_ROLE）', summary: '唯一协议角色：StateManager.setVaultFactory、ReservePSM 全局 pause/unpause、NAVOracle setSigner。', actions: ['指定官方 Factory', '全局暂停/恢复', 'setSigner'] }
+    };
+
+    // ---------- 演示账户（多账户：一个全能账户 + 多个多元角色账户；实际角色由逐对象任命决定） ----------
+    const WALLETS = {
+      alice: {
+        name: 'Alice · 全能运营账户', address: '0x71A4cB9082f3D18A28eF7231B1Fd9E3aC10A092C',
+        rolesByNetwork: {
+          'bnb-testnet': ['asset-owner', 'token-agent', 'proof-publisher', 'wrapper-controller', 'nav-signer', 'vault-owner', 'curator', 'settlement-operator'],
+          ethereum: ['asset-owner', 'token-agent'], bnb: ['vault-owner']
+        }
+      },
+      bob: {
+        name: 'Bob · 结算专员', address: '0xB0b50F2421cDC9E99146D76A38A3AAfF0410B050',
+        rolesByNetwork: { 'bnb-testnet': ['settlement-operator', 'psm-authorized-signer', 'relayer'], ethereum: [], bnb: [] }
+      },
+      carol: {
+        name: 'Carol · 证明发布', address: '0xC4r0l00000000000000000000000000000000001',
+        rolesByNetwork: { 'bnb-testnet': ['proof-publisher'], ethereum: [], bnb: [] }
+      },
+      dan: {
+        name: 'Dan · 风控与分配', address: '0xDA7e000000000000000000000000000000000002',
+        rolesByNetwork: { 'bnb-testnet': ['guardian', 'allocator'], ethereum: [], bnb: [] }
+      },
+      erin: {
+        name: 'Erin · 周期运维', address: '0xE21n000000000000000000000000000000000003',
+        rolesByNetwork: { 'bnb-testnet': ['keeper', 'allocator'], ethereum: [], bnb: [] }
+      },
+      governor: {
+        name: 'Protocol Council · Governor', address: '0x6A0e5D972F07a8152A5D992319bA75e104eA0011',
+        rolesByNetwork: { 'bnb-testnet': ['governor'], ethereum: ['governor'], bnb: ['governor'] }
+      },
+      dave: {
+        name: 'Dave · 普通用户（无角色）', address: '0x0DAvE00000000000000000000000000000000004',
+        rolesByNetwork: { 'bnb-testnet': [], ethereum: [], bnb: [] }
+      }
+    };
+
+    // ---------- 业务对象（演示数据） ----------
+    const ASSETS = [
+      { id: 1, name: 'US Treasury Token', symbol: 'htUST', decimals: 18, owner: '0x71A4c...A092C', token: '0x12A8...7F20', active: true, metadataHash: '0x9f2c...a41b', network: 'bnb-testnet', nav: '1.0186', type: 'Token Custody' },
+      { id: 2, name: 'HK Credit Pool Token', symbol: 'htHKC', decimals: 18, owner: '0x71A4c...A092C', token: '0x77D0...A803', active: true, metadataHash: '0x4b77...e02f', network: 'bnb-testnet', nav: '0.9921', type: 'Document Proof' }
+    ];
+    const VAULTS = [
+      { id: 'vault-alpha', name: 'T-Bill Income Vault', symbol: 'htTBILL', type: 'Earn', assetId: 1, owner: '0x71A4c...A092C', address: '0x73ceDE1e2f51F8FA5448454225d9DB68aEcB8317', network: 'bnb-testnet', status: 'listed', nav: '1.0186' },
+      { id: 'vault-credit', name: 'Private Credit Vault', symbol: 'htCREDIT', type: 'Liquidity', assetId: 2, owner: '0x71A4c...A092C', address: '0xC9D1...20B7', network: 'bnb-testnet', status: 'submitted', nav: '0.9921' }
+    ];
+    const WRAPPED = [
+      { assetId: 3, name: 'Wrapped htBNB', symbol: 'whtBNB', mode: 0, modeLabel: 'Token Custody', underlying: 'BNB（原生币）', underlyingToken: '0x0000...0000', wrappedToken: '0x7B01...c2A8', allowPartial: true, paused: false, controller: '0x71A4c...A092C' },
+      { assetId: 4, name: 'Wrapped HK Credit', symbol: 'whtHKC', mode: 1, modeLabel: 'Document Proof', underlying: '无链上托管', underlyingToken: '0x0000...0000', wrappedToken: '0x9D22...e401', allowPartial: false, paused: false, controller: '0x71A4c...A092C', signer: '0xB0b50...0B050' }
+    ];
+
+    // ---------- 运行状态 ----------
+    const DEFAULT_STATE = {
+      walletSession: { connected: false, network: 'bnb-testnet', walletId: null },
+      opsSession: { authenticated: false, reviewer: '' },
+      mintReqs: [],   // 双签队列：{nonce, assetId, amount, to, status: 'pending'|'approved', initiator, approver, at}
+      burnReqs: [],
+      navRecords: {}, // assetId -> {nav, dataTimestamp, signer, at}（NAVOracle 按 rwaToken 维度存）
+      proofs: [],     // {assetId, documentHash, uri, publisher, at}
+      activities: [],
+      activeIssuanceTab: 'issue',
+      activePorAsset: null, // PoR 页当前选中的资产 id（决定可发布权限）
+      issuanceWorkspaceAssets: [],
+      // 角色任命门控：新建 asset/vault 后必须先任命全部角色，才开放其他操作。示例对象预置已完成任命。
+      // 地址为 shortAddress(wallet.address)，不同钱包在不同 vault 里担任不同角色。
+      appointments: {
+        assets: {
+          1: { tokenAgent: '0xB0b50...0B050', proofPublisher: '0xC4r0l...00001' },
+          2: { tokenAgent: '0xB0b50...0B050', proofPublisher: '0xC4r0l...00001' }
+        },
+        vaults: {
+          'vault-alpha': { curator: '0x71A4c...A092C', guardian: '0xDA7e0...00002', allocator: '0xE21n0...00003', keeper: '0xE21n0...00003' },
+          'vault-credit': { curator: '0x71A4c...A092C', guardian: '0xDA7e0...00002', allocator: '0xDA7e0...00002', keeper: '0xE21n0...00003' }
+        }
+      },
+      // Settlement 合约的 per-vault operator（M-of-N）：Vault Owner 通过 setOperator/setThreshold 管理
+      settlementOps: {
+        'vault-alpha': { threshold: 2, operators: ['0xB0b50...0B050', '0x71A4c...A092C'], signatures: {}, history: [] },
+        'vault-credit': { threshold: 1, operators: ['0xB0b50...0B050'], signatures: {}, history: [] }
+      }
+    };
+    let state = loadState();
+    let toastTimer;
+
+    function clone(value) { return JSON.parse(JSON.stringify(value)); }
+    function loadState() {
+      try { const saved = JSON.parse(localStorage.getItem(STORAGE_KEY)); return saved ? { ...clone(DEFAULT_STATE), ...saved } : clone(DEFAULT_STATE); }
+      catch (e) { return clone(DEFAULT_STATE); }
+    }
+    function saveState() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+    function resetState() { state = clone(DEFAULT_STATE); saveState(); location.hash = '#/'; closeModal(); toast('演示数据已重置'); renderApp(); }
+    function navigate(hash) { if (location.hash === hash) renderApp(); else location.hash = hash; }
+    function currentPath() { return location.hash || '#/'; }
+
+    // ---------- 迷你 keccak256（与 ethers.keccak256 / 合约 keccak256(bytes) 一致） ----------
+    // 用途：metadataHash = keccak256(资产说明文档二进制内容)、documentHash = keccak256(证明文档内容)
+    const keccak256Bytes = (() => {
+      const MASK = (1n << 64n) - 1n;
+      const RC = [0x0000000000000001n, 0x0000000000008082n, 0x800000000000808an, 0x8000000080008000n, 0x000000000000808bn, 0x0000000080000001n, 0x8000000080008081n, 0x8000000000008009n, 0x000000000000008an, 0x0000000000000088n, 0x0000000080008009n, 0x000000008000000an, 0x000000008000808bn, 0x800000000000008bn, 0x8000000000008089n, 0x8000000000008003n, 0x8000000000008002n, 0x8000000000000080n, 0x000000000000800an, 0x800000008000000an, 0x8000000080008081n, 0x8000000000008080n, 0x0000000080000001n, 0x8000000080008008n];
+      // RHO[x + 5y] = 旋转量 r[x][y]
+      const RHO = [0, 1, 62, 28, 27, 36, 44, 6, 55, 20, 3, 10, 43, 25, 39, 41, 45, 15, 21, 8, 18, 2, 61, 56, 14];
+      const rotl = (x, n) => ((x << BigInt(n)) | (x >> BigInt(64 - n))) & MASK;
+      function keccakF(state) {
+        for (let round = 0; round < 24; round++) {
+          // θ
+          const C = new Array(5), D = new Array(5);
+          for (let x = 0; x < 5; x++) C[x] = state[x] ^ state[x + 5] ^ state[x + 10] ^ state[x + 15] ^ state[x + 20];
+          for (let x = 0; x < 5; x++) D[x] = C[(x + 4) % 5] ^ rotl(C[(x + 1) % 5], 1);
+          for (let i = 0; i < 25; i++) state[i] ^= D[i % 5];
+          // ρ
+          for (let i = 1; i < 25; i++) state[i] = rotl(state[i], RHO[i]);
+          // π：B[y, (2x+3y) mod 5] = A[x, y]
+          const B = new Array(25);
+          for (let y = 0; y < 5; y++) {
+            for (let x = 0; x < 5; x++) B[y + 5 * ((2 * x + 3 * y) % 5)] = state[x + 5 * y];
+          }
+          // χ
+          for (let y = 0; y < 5; y++) {
+            for (let x = 0; x < 5; x++) {
+              const i = x + 5 * y;
+              state[i] = B[i] ^ ((~B[(x + 1) % 5 + 5 * y]) & B[(x + 2) % 5 + 5 * y]);
+            }
+          }
+          // ι
+          state[0] ^= RC[round];
+        }
+      }
+      return function keccak256Bytes(input) {
+        // input: Uint8Array → '0x' + 64 hex（keccak-256，pad10*1：0x01 ... 0x80）
+        const rate = 136;
+        const nBlocks = Math.ceil((input.length + 1) / rate);
+        const padded = new Uint8Array(nBlocks * rate);
+        padded.set(input);
+        padded[input.length] = 0x01;
+        padded[padded.length - 1] ^= 0x80;
+        const state = new Array(25).fill(0n);
+        for (let b = 0; b < nBlocks; b++) {
+          for (let j = 0; j < rate / 8; j++) {
+            let v = 0n;
+            for (let k = 0; k < 8; k++) v |= BigInt(padded[b * rate + j * 8 + k]) << BigInt(8 * k);
+            state[j] ^= v;
+          }
+          keccakF(state);
+        }
+        // squeeze 前 32 字节（rate 136 > 32，无需二次置换）
+        let out = '0x';
+        for (let j = 0; j < 4; j++) {
+          let v = state[j];
+          for (let k = 0; k < 8; k++) { out += (v & 0xffn).toString(16).padStart(2, '0'); v >>= 8n; }
+        }
+        return out;
+      };
+    })();
+    // 从文件读取并计算 keccak256（file input change 时调用）
+    function hashFileTo(fieldId, infoId, label) {
+      const input = document.getElementById(fieldId);
+      const file = input && input.files && input.files[0];
+      if (!file) return toast('请先选择要上传的文档');
+      file.arrayBuffer().then(buf => {
+        const hash = keccak256Bytes(new Uint8Array(buf));
+        const target = document.getElementById(infoId);
+        if (target) {
+          target.value = hash;
+          target.dataset.generated = '1';
+        }
+        toast(`${label} = keccak256(文档内容) 已生成：${hash.slice(0, 18)}…`);
+      }).catch(() => toast('文件读取失败，请重试'));
+    }
+    function escapeHtml(value = '') { return String(value).replace(/[&<>'"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;' }[c])); }
+    function shortAddress(address = '') { return address.length > 14 ? address.slice(0, 7) + '...' + address.slice(-5) : address; }
+    function wallet() { return state.walletSession.connected ? WALLETS[state.walletSession.walletId] : null; }
+    function activeRoles() { const w = wallet(); return w ? (w.rolesByNetwork[state.walletSession.network] || []) : []; }
+    function hasRole(roleId) { return activeRoles().includes(roleId); }
+    function networkLabel() { return NETWORKS.find(n => n.id === state.walletSession.network)?.label || state.walletSession.network; }
+    function assetById(id) { return ASSETS.find(a => a.id === Number(id)); }
+    function vaultById(id) { return VAULTS.find(v => v.id === id); }
+    function wrappedById(id) { return WRAPPED.find(w => w.assetId === Number(id)); }
+    function roleObject(roleId) {
+      const g = ROLES[roleId]?.group;
+      if (g === 'vault') return VAULTS[0];
+      if (g === 'issuance') return ASSETS[0];
+      if (g === 'functional') return ROLES[roleId].scope === 'Vault' ? VAULTS[0] : ASSETS[0];
+      return { id: 'protocol', name: 'HyperTessera Protocol', address: networkLabel() };
+    }
+
+    // ---------- 角色任命门控：新建 asset/vault 后必须先任命全部角色，才开放其他操作 ----------
+    const ASSET_REQUIRED_ROLES = [
+      { key: 'tokenAgent', label: 'Token Agent', fn: 'setTokenAgent', hint: 'MintBurnController 双签第二签名（approveMint / approveBurn）' },
+      { key: 'proofPublisher', label: 'Proof Publisher', fn: 'setProofPublisher', hint: 'PoRRegistry 储备证明发布地址' }
+    ];
+    const VAULT_REQUIRED_ROLES = [
+      { key: 'curator', label: 'Curator', fn: 'setCurator', hint: '策略与费用配置' },
+      { key: 'guardian', label: 'Guardian', fn: 'setGuardian', hint: '紧急保护 / 取消待执行变更' },
+      { key: 'allocator', label: 'Allocator', fn: 'setAllocator', hint: '资金分配与再平衡' },
+      { key: 'keeper', label: 'Keeper', fn: 'setKeeper', hint: '周期推进与自动化维护' }
+    ];
+    function getAppointments(kind, id) { return (state.appointments[kind] || {})[id] || {}; }
+    function missingRoles(kind, id, required) { const ap = getAppointments(kind, id); return required.filter(r => !ap[r.key]); }
+
+    // ---------- 逐对象角色派生：角色 = 该对象的任命（地址匹配当前钱包），而非全局角色列表 ----------
+    const KEY_TO_ROLE = { curator: 'curator', guardian: 'guardian', allocator: 'allocator', keeper: 'keeper', tokenAgent: 'token-agent', proofPublisher: 'proof-publisher' };
+    function myAddr() { const w = wallet(); return w ? shortAddress(w.address) : ''; }
+    function addrToWallet(addr) { return Object.values(WALLETS).find(w => shortAddress(w.address) === addr); }
+    function holderName(addr) { const w = addrToWallet(addr); return w ? w.name.split(' ·')[0] : (addr || '未任命'); }
+    function getSettlementOps(vaultId) { return state.settlementOps[vaultId] || { threshold: 0, operators: [], signatures: {}, history: [] }; }
+    // 当前钱包在某 vault 是否持有某角色
+    function holdsVaultRole(roleId, vaultId) {
+      const vault = vaultById(vaultId); if (!vault) return false;
+      const me = myAddr(); if (!me) return false;
+      if (roleId === 'vault-owner') return vault.owner === me;
+      if (roleId === 'settlement-operator') return getSettlementOps(vaultId).operators.includes(me);
+      const ap = getAppointments('vaults', vaultId);
+      const key = Object.keys(KEY_TO_ROLE).find(k => KEY_TO_ROLE[k] === roleId && ['curator', 'guardian', 'allocator', 'keeper'].includes(k));
+      return key ? ap[key] === me : false;
+    }
+    function holdsAssetRole(roleId, assetId) {
+      const asset = assetById(assetId); if (!asset) return false;
+      const me = myAddr(); if (!me) return false;
+      if (roleId === 'asset-owner') return asset.owner === me;
+      const ap = getAppointments('assets', assetId);
+      const key = Object.keys(KEY_TO_ROLE).find(k => KEY_TO_ROLE[k] === roleId && ['tokenAgent', 'proofPublisher'].includes(k));
+      return key ? ap[key] === me : false;
+    }
+    // 某 vault 已任命的角色列表（含持有者地址），供侧栏展示；未任命的角色不出现
+    function vaultAppointedRoles(vaultId) {
+      const vault = vaultById(vaultId);
+      const ap = getAppointments('vaults', vaultId);
+      const out = [];
+      if (vault) out.push({ roleId: 'vault-owner', address: vault.owner });
+      for (const r of VAULT_REQUIRED_ROLES) if (ap[r.key]) out.push({ roleId: KEY_TO_ROLE[r.key], address: ap[r.key] });
+      const ops = getSettlementOps(vaultId);
+      if (ops.operators.length) out.push({ roleId: 'settlement-operator', multi: true });
+      return out;
+    }
+    function assetAppointedRoles(assetId) {
+      const asset = assetById(assetId);
+      const ap = getAppointments('assets', assetId);
+      const out = [];
+      if (asset) out.push({ roleId: 'asset-owner', address: asset.owner });
+      for (const r of ASSET_REQUIRED_ROLES) if (ap[r.key]) out.push({ roleId: KEY_TO_ROLE[r.key], address: ap[r.key] });
+      return out;
+    }
+    // 某钱包持有的全部角色（按对象），供 My Access / 统计卡 / 连接面板派生；不传 walletId 时取当前连接钱包
+    function walletRoleEntries(walletId) {
+      const w = walletId ? WALLETS[walletId] : wallet();
+      if (!w) return [];
+      const me = shortAddress(w.address);
+      const entries = [];
+      for (const a of ASSETS) {
+        for (const r of assetAppointedRoles(a.id)) if (r.address === me) entries.push({ roleId: r.roleId, kind: 'asset', id: a.id, name: a.name });
+      }
+      for (const v of VAULTS) {
+        if (v.owner === me) entries.push({ roleId: 'vault-owner', kind: 'vault', id: v.id, name: v.name });
+        const ap = getAppointments('vaults', v.id);
+        for (const r of VAULT_REQUIRED_ROLES) if (ap[r.key] === me) entries.push({ roleId: KEY_TO_ROLE[r.key], kind: 'vault', id: v.id, name: v.name });
+        if (getSettlementOps(v.id).operators.includes(me)) entries.push({ roleId: 'settlement-operator', kind: 'vault', id: v.id, name: v.name });
+      }
+      if ((w.rolesByNetwork[state.walletSession.network] || []).includes('governor')) entries.push({ roleId: 'governor', kind: 'protocol', id: 'protocol', name: 'HyperTessera Protocol' });
+      return entries;
+    }
+    // Settlement 演示数据（队列 / 周期 / 资金）：真实实现来自 Indexer API
+    function settlementDemoData(vaultId) {
+      const seed = String(vaultId).split('').reduce((s, c) => s + c.charCodeAt(0), 0);
+      const deposit = [], redeem = [];
+      for (let i = 1; i <= 5; i++) deposit.push({ id: `D-${seed}${i}`, from: holderName(['0xB0b50...0B050', '0xDA7e0...00002', '0xE21n0...00003', '0x71A4c...A092C', '0xC4r0l...00001'][i % 5]) + ` #${i}`, amount: (i * 1200 + seed % 500).toFixed(0) });
+      for (let i = 1; i <= 4; i++) redeem.push({ id: `R-${seed}${i}`, from: holderName(['0xDA7e0...00002', '0xE21n0...00003', '0xB0b50...0B050', '0xC4r0l...00001'][i % 4]) + ` #${i}`, amount: (i * 800 + seed % 300).toFixed(0) });
+      const depositTotal = deposit.reduce((s, x) => s + Number(x.amount), 0);
+      const redeemTotal = redeem.reduce((s, x) => s + Number(x.amount), 0);
+      return { cycle: 3 + (seed % 4), phase: 'SETTLING', nav: '1.0186', deposit, redeem, depositTotal, redeemTotal, net: depositTotal - redeemTotal, poolAvailable: Math.max(depositTotal - redeemTotal, 0) + 5000, cap: depositTotal + 20000 };
+    }
+
+    function toast(message) {
+      const el = document.getElementById('toast');
+      el.textContent = message; el.classList.add('show'); clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => el.classList.remove('show'), 3200);
+    }
+    function showModal(content) { document.getElementById('modal-root').innerHTML = `<div class="modal-backdrop" data-close-modal="true"><section class="modal card" role="dialog" aria-modal="true">${content}</section></div>`; }
+    function closeModal() { document.getElementById('modal-root').innerHTML = ''; }
+
+    // ---------- 通用组件 ----------
+    function statusBadge(status) {
+      const map = { listed: ['已上架','success'], submitted: ['待审核','warning'], pending: ['待批准','warning'], approved: ['已批准','success'], confirmed: ['已确认','success'], paused: ['已暂停','danger'], active: ['正常','success'], released: ['已释放','success'] };
+      const [label, tone] = map[status] || [status, 'neutral'];
+      return `<span class="badge ${tone}">${label}</span>`;
+    }
+    function callTag(name, plain = false) { return `<span class="call-tag ${plain ? 'plain' : ''}">${name}</span>`; }
+    function roleChip(roleId) {
+      const role = ROLES[roleId];
+      if (!role) return '';
+      const open = !roleId.includes('owner') && !roleId.includes('agent') && !roleId.includes('issuer') && !roleId.includes('signer') ? 'open' : '';
+      return `<span class="role-chip ${open}">${role.label}</span>`;
+    }
+
+    // ---------- 导航菜单定义 ----------
+    // 资产发行 = 导航大模块（不可点击进入），hover 展开「发行」子页面；
+    // 发行页 3 个标签页：发行 / 包装或解包装 / 工作台。下拉项直接切换对应标签页。
+    const ISSUANCE_MENU = [
+      { id: 'issue', label: '发行', route: '#/issuance/issue', items: [
+        { id: 'issue', label: '发行新资产代币', desc: 'registerAsset · 开放注册，注册者成为 Asset Owner', tab: 'issue' },
+        { id: 'wrap', label: '包装或解包装', desc: 'ReservePSM · 托管 1:1 / 凭证签名铸币', tab: 'wrap' },
+        { id: 'workspace', label: '角色工作台', desc: '资产列表 → 进入该资产的角色操作面板', tab: 'workspace' }
+      ]}
+    ];
+    const VAULTS_MENU = [
+      { id: 'create', label: '创建金库', desc: 'deployVault · 开放部署，创建者成为 Owner；需 Governor 先通过 setVaultFactory 指定官方 Factory', route: '#/vaults/create' },
+      { id: 'manage', label: '管理金库', desc: 'VaultFactory · 角色管理 / 上架申请', route: '#/vaults/manage' }
+    ];
+
+    // 顶部导航：label 为一级大模块，groups 为 hover 下拉内容；sub 为当前高亮子项 id；foot 为面板底部说明（可选）
+    function navMenu({ label, active, groups, sub, foot, single }) {
+      return `<span class="navmenu">
+        <button class="navlink navmenu__trigger ${active ? 'active' : ''}" aria-haspopup="menu" aria-expanded="false">${label}
+          <svg class="navmenu__chev" width="9" height="6" viewBox="0 0 9 6" fill="none" aria-hidden="true"><path d="M1 1l3.5 3.5L8 1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <div class="navmenu__panel" role="menu">
+          <div class="navmenu__grid ${single ? 'navmenu__grid--single' : ''}">${groups.map(g => `<div>${g.items ? `
+              <div class="navmenu__group-label">${g.label}</div>${g.items.map(it => `<button class="navmenu__item ${it.id === sub ? 'active' : ''}" ${it.tab ? `data-issuance-tab="${it.tab}"` : `data-route="${it.route}"`} role="menuitem"><strong>${it.label}</strong><span>${it.desc}</span></button>`).join('')}` : `<button class="navmenu__item" data-route="${g.route}" role="menuitem"><strong>${g.label}</strong><span>${g.desc || ''}</span></button>`}</div>`).join('')}</div>
+          ${foot ? `<div class="navmenu__foot"><span class="small quiet">${foot.note}</span><button data-route="${foot.route}">${foot.cta}</button></div>` : ''}
+        </div>
+      </span>`;
+    }
+
+    function publicHeader(active, sub) {
+      const connected = wallet();
+      return `<header class="topbar">
+        <button class="text-button brand" data-route="#/">Hyper<span>Tessera</span></button>
+        <nav class="topnav" aria-label="主导航">
+          <button class="navlink ${active === 'products' ? 'active' : ''}" data-route="#/products">Products</button>
+          ${navMenu({ label: '资产发行', active: active === 'issuance', groups: ISSUANCE_MENU, sub, single: true })}
+          ${navMenu({ label: '资产管理', active: active === 'vaults', groups: VAULTS_MENU.map(g => ({ ...g, items: null })) })}
+          <button class="navlink ${active === 'access' ? 'active' : ''}" data-route="#/access">My Access</button>
+        </nav>
+        <div class="top-actions">
+          <button class="text-button" data-route="#/blueprint">页面蓝图</button>
+          <select class="network-select" aria-label="当前网络" data-network-select>${NETWORKS.map(n => `<option value="${n.id}" ${n.id === state.walletSession.network ? 'selected' : ''}>${n.label}</option>`).join('')}</select>
+          <button class="btn secondary wallet-button" data-open-wallet>${connected ? escapeHtml(shortAddress(connected.address)) : '连接钱包'}</button>
+        </div>
+      </header>`;
+    }
+
+    // 发行 / 包装/解包装 / 工作台 标签页切换
+    function sectionTabs(current) {
+      const tabs = [
+        { id: 'issue', label: '发行', icon: '⊕' },
+        { id: 'wrap', label: '包装/解包装', icon: '⇄' },
+        { id: 'workspace', label: '工作台', icon: '⊞' }
+      ];
+      return `<div class="tab-nav" role="tablist" aria-label="资产发行子页面">
+        ${tabs.map(t => `<button class="tab-btn ${current === t.id ? 'active' : ''}" data-issuance-tab="${t.id}" role="tab" aria-selected="${current === t.id}">${t.icon} ${t.label}</button>`).join('')}
+      </div>`;
+    }
+
+    // 模块选择卡：发行 / 管理中心里的功能入口
+    function moduleCard({ no, title, desc, route, tag, open, lockNote, soft = false }) {
+      return `<article class="module-card">
+        <span class="module-no ${soft ? 'soft' : ''}">${no}</span>
+        <h3>${title}</h3>
+        <p>${desc}</p>
+        <div class="module-actions">${callTag(tag)}${open ? `<button class="btn small" data-route="${route}">进入</button>` : `<span class="badge neutral">${lockNote || '当前账户无此角色'}</span>`}</div>
+      </article>`;
+    }
+
+    function contextBar(extra = '') {
+      const current = wallet();
+      return `<div class="contextbar card">
+        <div class="context-item"><span>Network</span><strong>${networkLabel()}</strong></div>
+        <div class="context-item"><span>Wallet</span><strong>${current ? escapeHtml(shortAddress(current.address)) : '未连接'}</strong></div>
+        <div class="context-item"><span>Access</span><strong>${current ? walletRoleEntries().length + ' 个角色' : '等待连接'}</strong></div>
+        ${extra}
+      </div>`;
+    }
+
+    // 操作说明面板：每个操作页右侧展示 合约调用 / 权限 / 前置条件 / 结果事件 / 去向
+    function sidePanel({ contract, permission, permissionNote, pre, events, next, note }) {
+      return `<aside class="side-panel card">
+        <h4>操作说明</h4>
+        <div class="op-desc">${contract ? '本操作对应链上合约调用，可在下方查看权限与结果。' : '本页面为业务中心或列表页，不直接发起链上交易。'}</div>
+        <div class="kv"><span>合约调用</span><strong class="mono">${contract || '—'}</strong></div>
+        <div class="kv"><span>权限要求</span><strong>${permission || '—'}</strong></div>
+        ${permissionNote ? `<div class="kv"><span>权限说明</span><strong>${permissionNote}</strong></div>` : ''}
+        ${pre ? `<div class="kv"><span>前置条件</span><strong>${pre}</strong></div>` : ''}
+        ${events ? `<div class="kv"><span>结果事件</span><strong class="mono">${events}</strong></div>` : ''}
+        ${next ? `<div class="kv"><span>完成后去向</span><strong>${next}</strong></div>` : ''}
+        ${note ? `<div class="op-alert">${note}</div>` : ''}
+      </aside>`;
+    }
+
+    // 流程步骤条：current 为当前进行到的步骤索引（0-based，-1 表示未开始）
+    function flowBar(steps, current) {
+      return `<div class="flowbar">${steps.map((s, i) => `<div class="flowstep ${i < current ? 'done' : i === current ? 'current' : ''}"><span class="step-no">${i + 1}</span><strong>${s.t}</strong><span>${s.d}</span></div>`).join('')}</div>`;
+    }
+
+    // ---------- 首页 ----------
+    function renderHome() {
+      return `${publicHeader('')}<main class="page">
+        <section class="hero card">
+          <div>
+            <div class="eyebrow">PR#12 workbench blueprint</div>
+            <h1>资产发行 → 包装资产 → 创建金库，一条完整的链上工作流</h1>
+            <p>本稿按 PR#12（asset-infrastructure）合约重新组织工作台：每个操作页都标注对应的合约函数、权限要求与结果事件。先看「页面蓝图」掌握整体结构，再按演示顺序走通三个核心流程。</p>
+            <div class="hero-actions">
+              <button class="btn" data-route="#/blueprint">查看页面蓝图与流程</button>
+              <button class="btn secondary" data-open-wallet>${wallet() ? '切换演示账户' : '选择演示账户'}</button>
+            </div>          </div>
+          <div class="journey" aria-label="演示流程">
+            <div class="journey-step"><span class="step-no">1</span><div><strong>连接账户并选网络</strong><span>推荐 BNB Testnet（97），与真实部署地址一致</span></div></div>
+            <div class="journey-step"><span class="step-no">2</span><div><strong>资产发行 → 发行 → 发行新资产代币</strong><span>顶部导航 hover「资产发行」展开子页面，注册资产开放无许可</span></div></div>
+            <div class="journey-step"><span class="step-no">3</span><div><strong>工作台标签页 → 资产详情完成 Mint 双签</strong><span>Issuer 发起 → 切换 Token Agent 账户批准</span></div></div>
+            <div class="journey-step"><span class="step-no">4</span><div><strong>包装资产 / 创建金库</strong><span>PSM 兑换与开放 VaultFactory 部署</span></div></div>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="section-title"><div><div class="eyebrow">Four surfaces</div><h2>四个身份边界，页面互不混淆</h2></div></div>
+          <div class="grid four">
+            <article class="entry-card card"><div class="entry-kicker">公开产品</div><h3>Products</h3><p>访客无需钱包即可浏览通过审核上架的 Vault。</p><button class="btn secondary" data-route="#/products">查看 Products</button></article>
+            <article class="entry-card card"><div class="entry-kicker">资产发行</div><h3>资产发行</h3><p>导航大模块：hover 展开「发行」子页面，3 个标签页（发行/包装/工作台）覆盖资产全生命周期。</p><button class="btn secondary" data-route="#/issuance/issue">进入发行</button></article>
+            <article class="entry-card card"><div class="entry-kicker">资产管理</div><h3>资产管理中心</h3><p>创建金库（开放部署，需 Governor 先通过 setVaultFactory 指定官方 Factory）、管理金库角色与运营操作。</p><button class="btn secondary" data-route="#/vaults">进入资产管理</button></article>
+            <article class="entry-card card"><div class="entry-kicker">内部运营</div><h3>Vault 上架审核</h3><p>独立账号密码体系，审核网站展示资料，不连接钱包。</p><button class="btn secondary" data-route="#/ops/login">进入审核后台</button></article>
+          </div>
+        </section>
+
+        <section class="section card card-pad">
+          <div class="section-title"><div><div class="eyebrow">Quick start</div><h3>推荐演示顺序</h3></div><span class="badge neutral">5 步走通全流程</span></div>
+          <div class="edge-list">
+            <div class="edge-row"><div class="edge-from">① 连接 Alice</div><div class="edge-via">→</div><div class="edge-to">资产发行 · 发行标签页</div><div class="edge-cond">顶部导航 hover「资产发行」→「发行」；Alice 在 BNB Testnet 拥有 asset-owner / issuer / nav-signer / vault-owner 四个角色</div></div>
+            <div class="edge-row"><div class="edge-from">② 发行新资产代币</div><div class="edge-via">→</div><div class="edge-to">工作台 → 资产详情</div><div class="edge-cond">registerAsset 成功后自动跳转资产详情（Asset Owner 视角）</div></div>
+            <div class="edge-row"><div class="edge-from">③ 发起 Mint</div><div class="edge-via">→</div><div class="edge-to">切换 Bob 批准</div><div class="edge-cond">Issuer 发起 initiateMint，Token Agent 账户（Bob）在队列中 approveMint</div></div>
+            <div class="edge-row"><div class="edge-from">④ 更新 NAV</div><div class="edge-via">→</div><div class="edge-to">预言机数据页</div><div class="edge-cond">NAV Signer 做 EIP-712 签名后提交 updateNAV(rwaToken, price, dataTimestamp, signature)</div></div>
+            <div class="edge-row"><div class="edge-from">⑤ 创建金库</div><div class="edge-via">→</div><div class="edge-to">管理金库</div><div class="edge-cond">任何账户调用 deployVault，创建者自动成为 Owner</div></div>
+          </div>
+        </section>
+      </main>`;
+    }
+
+    // ---------- 页面蓝图：信息架构 + 跳转关系 + 核心流程 ----------
+    const SITEMAP = [
+      { group: '公开产品', kicker: 'Public', items: [
+        { route: '#/products', name: 'Products', desc: '已上架 Vault 列表与详情，无需钱包。', perm: '无钱包' },
+      ]},
+      { group: '资产发行', kicker: 'Issuance', items: [
+        { route: '#/issuance/issue', name: '发行（子页面）', desc: '导航 hover 展开的「发行」分组：3 个标签页（发行/包装/工作台）。', perm: '连接钱包' },
+        { route: '#/assets/register', name: '发行新资产代币', desc: 'registerAsset 表单，注册者成为 Asset Owner。（发行 · 模块 1）', perm: '无许可' },
+        { route: '#/assets/wrap', name: '包装或解包装', desc: 'PSM 双模式兑换：托管 1:1 / 凭证签名铸币。（发行 · 模块 2）', perm: '无许可' },
+        { route: '#/assets/oracle', name: '预言机数据', desc: 'NAV 签名与提交、签名者管理。（发行 · 模块 3）', perm: 'rwaToken 授权 Signer' },
+        { route: '#/assets/manage', name: '管理已发行资产代币', desc: '我的资产列表 → 资产详情（元数据/所有权/停用 + 双签）。（管理 · 模块 1）', perm: 'Asset Owner' },
+        { route: '#/assets/wrapped', name: '管理包装资产代币', desc: '包装资产配置状态、部署与暂停开关。（管理 · 模块 2）', perm: '部署无许可 / 管理=Wrapper Controller' },
+        { route: '#/assets/por', name: '储备证明', desc: 'PoRRegistry 发布与历史查询（从资产详情进入）。', perm: '资产 Owner 或任命的 Publisher' },
+        { route: '#/assets/mintburn/:id', name: 'Mint / Burn 双签工作台', desc: 'Issuer 发起 → Token Agent 批准（从资产详情进入）。', perm: 'Issuer（资产 Owner）+ Token Agent（setTokenAgent 任命）' },
+      ]},
+      { group: '资产管理', kicker: 'Vault', items: [
+        { route: '#/vaults', name: '资产管理中心', desc: '业务总览：4 个统计模块 + 管理金库表格；角色入口位于金库详情。', perm: '连接钱包' },
+        { route: '#/vaults/create', name: '创建金库', desc: 'deployVault 开放部署；需 Governor 先通过 setVaultFactory 指定官方 Factory。', perm: '无许可' },
+        { route: '#/vaults/manage', name: '管理金库', desc: '金库列表 → 金库详情（角色工作台：左侧我的角色 + 右侧操作区 / Activity）。', perm: 'Vault Owner' },
+      ]},
+      { group: '内部运营', kicker: 'Ops', items: [
+        { route: '#/ops/login', name: '审核后台登录', desc: '独立账号密码，不连接钱包。', perm: '账号密码' },
+        { route: '#/ops/dashboard', name: '审核 Dashboard', desc: '审核队列 / 已上架 Vault / 审核历史。', perm: 'Ops 账号' },
+      ]}
+    ];
+
+    // 页面跳转关系（入口 → 目标 + 触发条件）
+    const EDGES = [
+      { from: '顶部导航 · 资产发行', to: '发行子页面（3 标签页）', via: 'hover 下拉', cond: '鼠标悬停「资产发行」大模块，菜单不可点击进入' },
+      { from: '发行子页面', to: '发行 / 包装或解包装 / 工作台', via: '标签页切换', cond: '3 个标签页：发行注册表单、包装兑换、资产工作台' },
+      { from: '发行新资产代币', to: '资产详情', via: '注册成功自动跳转', cond: 'registerAsset 成功后进入 Asset Owner 视角' },
+      { from: '资产详情', to: 'Mint/Burn 双签工作台', via: '操作按钮', cond: '点击「发起 Mint」或「发起 Burn」' },
+      { from: '资产详情', to: '储备证明', via: '操作按钮', cond: '点击「发布储备证明」（资产 Owner 或任命的 Publisher）' },
+      { from: '资产管理', to: '创建金库 / 管理金库', via: 'hover 下拉', cond: '创建开放（需官方 Factory）；管理需 vault-owner 角色' },
+      { from: '管理金库', to: '金库详情', via: '对象列表', cond: '点击自己的金库' },
+      { from: '金库详情', to: '预言机数据', via: '操作按钮', cond: '点击「更新 NAV」（rwaToken 授权 Signer）' },
+      { from: '金库详情', to: '审核后台', via: '上架申请', cond: 'Vault Owner 提交 → 内部 Ops 账号审核' },
+    ];
+
+    function renderBlueprint() {
+      return `${publicHeader('')}<main class="page">
+        <div class="page-head"><div><div class="eyebrow">Information architecture</div><h1>页面蓝图与操作流程</h1><p>全部页面按四个身份边界分组；每个页面标注路由、权限要求与对应的合约函数。下方是页面跳转关系与三条核心操作流程。</p></div><button class="btn secondary" data-route="#/">返回首页</button></div>
+
+        <section class="section">
+          <div class="section-title"><div><div class="eyebrow">Sitemap</div><h2>信息架构：资产发行 3 标签页 / 4 个域</h2></div><span class="badge neutral">资产发行为导航大模块，hover 展开</span></div>
+          <div class="sitemap-grid">${SITEMAP.map(domain => `<div class="card card-pad"><div class="entry-kicker" style="margin-bottom:14px">${domain.kicker} · ${domain.group}</div><div class="stack">${domain.items.map(item => `<div class="req-item" style="flex-direction:column;align-items:stretch"><div class="req-main"><h4>${item.name}</h4><p>${item.desc}</p><div class="row wrap" style="margin-top:8px"><span class="route">${item.route}</span>${item.perm ? `<span class="role-chip">${item.perm}</span>` : ''}</div></div></div>`).join('')}</div></div>`).join('')}</div>
+        </section>
+
+        <section class="section card card-pad">
+          <div class="section-title"><div><div class="eyebrow">Navigation graph</div><h2>页面跳转关系</h2></div><span class="badge neutral">入口 → 目标 + 触发条件</span></div>
+          <div class="edge-list">${EDGES.map(e => `<div class="edge-row"><div class="edge-from">${e.from}</div><div class="edge-via">→ ${e.via} →</div><div class="edge-to">${e.to}</div><div class="edge-cond">${e.cond}</div></div>`).join('')}</div>
+        </section>
+
+        <section class="section">
+          <div class="section-title"><div><div class="eyebrow">Core flows</div><h2>三条核心操作流程</h2></div></div>
+          <div class="stack">
+            <article class="card card-pad"><div class="row between wrap" style="margin-bottom:14px"><h3>流程 A · 资产发行与 Mint 双签</h3>${callTag('AssetRegistry.registerAsset')} ${callTag('MintBurnController.initiateMint / approveMint')}</div>
+              ${flowBar([{t:'注册资产', d:'registerAsset(metadataHash, name, symbol, decimals)，无许可，注册者成为 Asset Owner，同交易部署专属 RWAToken'},{t:'发起 Mint', d:'Issuer（资产 owner）调 initiateMint(assetId, amount, to)，生成待批准请求 MintInitiated(nonce)'},{t:'批准 Mint', d:'Token Agent（setTokenAgent 任命）调 approveMint(nonce)，请求批准并执行 rwaToken.mint()'},{t:'资产上链', d:'MintApproved 事件落账，Token 余额到账，Asset Owner 可继续管理元数据'}], 0)}
+              <p class="small muted" style="margin:12px 0 0">演示路径：资产发行中心 → 发行新资产代币 → 管理已发行资产代币 → 资产详情 → Mint/Burn 双签工作台（发起 → 切换 Bob 批准）。</p>
+            </article>
+            <article class="card card-pad"><div class="row between wrap" style="margin-bottom:14px"><h3>流程 B · 包装资产兑换（ReservePSM 双模式）</h3>${callTag('ReservePSM.wrap / unwrap')} ${callTag('ReservePSM.mintWithAuthorization')}</div>
+              ${flowBar([{t:'部署包装资产', d:'任何账户调 deployWrappedToken(assetId, mode, underlyingToken, name, symbol, decimals, allowPartialUnwrap)，部署者成为 Wrapper Controller'},{t:'Wrap 兑换', d:'Custody：wrap 托管底层 1:1 铸包装代币；Proof：PSM Authorized Signer 签名后 mintWithAuthorization'},{t:'自由流转', d:'WrappedAsset 为普通 ERC-20，除 PSM 外自由转账'},{t:'Unwrap 赎回', d:'Custody 按比例返还底层；Proof 仅支持全额赎回并触发 ReleaseRequested 供链外释放'}], 0)}
+              <p class="small muted" style="margin:12px 0 0">演示路径：资产发行中心 → 包装或解包装（选择资产 → wrap / unwrap，切换 Bob 演示签名铸币）。</p>
+            </article>
+            <article class="card card-pad"><div class="row between wrap" style="margin-bottom:14px"><h3>流程 C · 创建金库（开放部署）</h3>${callTag('VaultFactory.deployVault')} ${callTag('StateManager.registerVault')}</div>
+              ${flowBar([{t:'指定官方 Factory', d:'Governor 调 StateManager.setVaultFactory(factory)，官方 Factory 地址写入 StateManager'},{t:'用户调用部署', d:'任何用户调 VaultFactory.deployVault(VaultParams 14 字段，adapterRegistry 必填、owner 可空)，无需角色；Factory 部署 Vault + Timelock'},{t:'Factory 注册', d:'Factory 调 StateManager.registerVault，校验 msg.sender == vaultFactory 地址匹配'},{t:'创建者成为 Owner', d:'VaultDeployed 事件落账，创建者（或 params.owner）获得该金库 Owner 身份'}], 0)}
+              <p class="small muted" style="margin:12px 0 0">先决条件：Governor 调 StateManager.setVaultFactory 指定官方 Factory。演示路径：资产管理中心 → 创建金库 → 管理金库（创建者视角）。</p>
+            </article>
+          </div>
+        </section>
+      </main>`;
+    }
+
+    // ---------- Products（公开域，简化保留） ----------
+    function vaultCard(vault) {
+      return `<article class="card card-pad"><div class="row between wrap"><div><div class="small quiet">${vault.network} · ${vault.symbol} · ${vault.type}</div><h3 style="margin-top:4px">${escapeHtml(vault.name)}</h3></div>${statusBadge(vault.status === 'listed' ? 'listed' : vault.status === 'submitted' ? 'submitted' : 'pending')}</div><p class="small">底层资产 ${vault.id === 'vault-alpha' ? 'US Treasury Bills' : 'Private Credit'} · 指示 APY ${vault.id === 'vault-alpha' ? '5.18%' : '8.42%'}</p><button class="btn secondary small" data-route="#/vaults/manage/${vault.id}">查看产品详情</button></article>`;
+    }
+    function renderProducts() {
+      return `${publicHeader('products')}<main class="page">
+        <div class="page-head"><div><div class="eyebrow">Products</div><h1>已上架 Vault</h1><p>仅展示通过网站运营审核的产品。网站上架不代表协议担保，不改变链上状态。</p></div></div>
+        <div class="grid three">${VAULTS.filter(v => v.status === 'listed').map(vaultCard).join('') || '<div class="empty card" style="grid-column:1/-1"><h3>暂无已上架产品</h3></div>'}</div>
+      </main>`;
+    }
+
+    // ---------- 钱包连接 ----------
+    function renderConnectPanel(title) {
+      return `${publicHeader('access')}<main class="page"><div class="page-head"><div><div class="eyebrow">Wallet access</div><h1>${title}</h1><p>先选择网络并连接演示账户，系统将按「网络 + 钱包」查询该账户拥有的角色，只展示可执行的工作台。</p></div></div>
+        <section class="connect-panel card">
+          <div class="connect-copy"><div class="eyebrow">Demo identities</div><h2>选择一个演示账户</h2><p>不同账户展示不同权限组合。切换网络后角色列表同步更新。</p><div class="field"><label for="connect-network" style="color:#c8d7e8">网络</label><select id="connect-network" class="select" data-connect-network>${NETWORKS.map(n => `<option value="${n.id}" ${n.id === state.walletSession.network ? 'selected' : ''}>${n.label}</option>`).join('')}</select></div></div>
+          <div class="account-list">${Object.entries(WALLETS).map(([id, account]) => `<button class="account-option" data-connect-wallet="${id}"><div><strong>${escapeHtml(account.name)}</strong><span class="mono">${escapeHtml(shortAddress(account.address))}</span></div><span class="badge neutral">${walletRoleEntries(id).length} 个角色</span></button>`).join('')}</div>
+        </section>
+      </main>`;
+    }
+
+    // ---------- My Access（权限聚合：按逐对象任命派生，同一角色在不同对象里分别列出） ----------
+    function renderAccess() {
+      if (!wallet()) return renderConnectPanel('My Access');
+      const entries = walletRoleEntries();
+      const groupLabels = { vault: '资产管理角色', issuance: '资产发行角色', functional: '功能身份', protocol: '协议治理角色' };
+      const grouped = ['vault', 'issuance', 'functional', 'protocol'].map(g => ({ group: g, items: entries.filter(en => ROLES[en.roleId]?.group === g) })).filter(x => x.items.length);
+      const vaultCount = new Set(entries.filter(e => e.kind === 'vault').map(e => e.id)).size;
+      const assetCount = new Set(entries.filter(e => e.kind === 'asset').map(e => e.id)).size;
+      const target = en => en.kind === 'vault' ? `#/workspace/${en.roleId}/${en.id}` : en.kind === 'asset' ? `#/assets/workspace/${en.id}/${en.roleId}` : '#/blueprint';
+      return `${publicHeader('access')}<main class="page">
+        <div class="page-head"><div><div class="eyebrow">My Access</div><h1>当前账户的权限与待办</h1><p>权限由「逐对象任命」派生：同一个角色在不同 Vault / 资产里分别计数，未任命的对象不会显示。</p></div><div class="row"><button class="btn secondary" data-open-wallet>切换账户</button></div></div>
+        ${contextBar()}
+        <div class="grid four"><div class="stat card"><div class="stat-label">可操作角色</div><div class="stat-value">${entries.length}</div><div class="stat-foot">按对象派生</div></div><div class="stat card"><div class="stat-label">可操作 Vault</div><div class="stat-value">${vaultCount}</div><div class="stat-foot">对象级权限</div></div><div class="stat card"><div class="stat-label">可操作资产</div><div class="stat-value">${assetCount}</div><div class="stat-foot">对象级权限</div></div><div class="stat card"><div class="stat-label">今日操作</div><div class="stat-value">${state.activities.length}</div><div class="stat-foot">Activity</div></div></div>
+        <section class="section grid two">
+          <article class="card card-pad"><div class="section-title"><h3>权限清单</h3><span class="badge neutral">只显示已任命</span></div>${grouped.length ? grouped.map(item => `<div class="side-label" style="padding-left:0;margin-top:12px;font-size:11px;font-weight:800;color:var(--quiet);text-transform:uppercase;letter-spacing:.09em">${groupLabels[item.group]}</div><div class="stack">${item.items.map(en => `<button class="account-option" data-route="${target(en)}"><div><strong>${ROLES[en.roleId].label}</strong><span>${en.kind === 'protocol' ? '协议治理' : escapeHtml(en.name)}</span></div><span class="badge">进入</span></button>`).join('')}</div>`).join('') : `<div class="empty"><h3>当前账户没有被任命任何角色</h3><p>仍可使用无许可功能：注册资产、包装兑换、创建金库。</p><button class="btn secondary" data-route="#/issuance/issue">进入资产发行</button></div>`}</article>
+          <article class="card card-pad"><div class="section-title"><h3>优先待办</h3><span class="badge warning">按对象聚合</span></div>${entries.length ? `<div class="stack">${entries.slice(0, 6).map(en => `<button class="account-option" data-route="${target(en)}"><div><strong>${ROLES[en.roleId].label}</strong><span>${en.kind === 'protocol' ? ROLES[en.roleId].contract : escapeHtml(en.name) + ' · ' + ROLES[en.roleId].contract.split('（')[0]}</span></div><span class="badge">前往</span></button>`).join('')}</div>` : `<div class="empty"><h3>无角色待办</h3><p>切换到 Alice / Bob / Dan / Erin 查看不同角色的演示。</p></div>`}</article>
+        </section>
+      </main>`;
+    }
+
+    // ---------- 角色工作台（统一分发器：按角色 → 对应业务页） ----------
+    function renderWorkspace(roleId, objectId) {
+      if (!wallet()) return renderConnectPanel('角色工作台');
+      if (!ROLES[roleId]) return renderNotFound('未知角色');
+      const role = ROLES[roleId];
+      // 金库域角色：进入金库角色工作台（双栏布局，左侧「我的角色」可切换）
+      if (role.group === 'vault') return vaultRoleWorkspace(roleId, objectId || (VAULTS[0] && VAULTS[0].id));
+      // 资产发行 / 功能身份角色：进入资产角色工作台（双栏布局，左侧角色侧栏）
+      if (role.group === 'issuance' || role.group === 'functional') return assetRoleWorkspace(roleId, objectId ? Number(objectId) : (ASSETS[0] && ASSETS[0].id));
+      // 协议治理角色
+      const obj = roleObject(roleId);
+      const target = '#/blueprint';
+      return `${publicHeader(role.group === 'vault' ? 'vaults' : 'issuance')}<main class="page">
+        ${contextBar(`<div class="context-item"><span>Object</span><strong>${escapeHtml(obj?.name || 'Protocol')}</strong></div><div class="context-item"><span>Role</span><strong>${role.label}</strong></div>`)}
+        <div class="page-head"><div><div class="eyebrow">${role.scope} workspace</div><h1>${role.label}</h1><p>${role.summary}</p></div><div class="row"><span class="badge success">权限已确认</span></div></div>
+        <section class="card card-pad"><div class="row between wrap"><div><strong>权限来源</strong><div class="small muted" style="margin-top:4px">${networkLabel()} · ${shortAddress(wallet().address)} · ${escapeHtml(obj?.address || 'Protocol')}</div></div><span class="call-tag">${role.contract}</span></div></section>
+        <section class="section card card-pad"><div class="section-title"><h3>可执行操作</h3><span class="badge neutral">合约映射</span></div><div class="stack">${role.actions.map((action, i) => `<div class="req-item"><div class="req-main"><h4>${action}</h4><p>${role.contract} · ${i === 0 ? '演示版记录 Activity 并跳转对应页面' : '对应合约函数见右侧说明'}</p></div><button class="btn ${i ? 'secondary' : ''} small" data-route="${target}">进入操作</button></div>`).join('')}</div></section>
+      </main>`;
+    }
+
+    // =====================================================================
+    //  资产发行域（Issuance）：register → manage → mint/burn → oracle → por → wrap
+    // =====================================================================
+
+    // ---------- 发行（子页面）：3 个标签页（发行 / 包装/解包装 / 工作台） ----------
+    function renderIssueCenter() {
+      if (!wallet()) return renderConnectPanel('资产发行');
+      const tab = state.activeIssuanceTab || 'issue';
+      return `${publicHeader('issuance', tab)}<main class="page">
+        <div class="page-head"><div><div class="eyebrow">Issuance Hub</div><h1>资产发行</h1><p>三个标签页覆盖资产全生命周期：注册新资产、包装/解包装兑换、以及工作台中的角色管理操作。</p></div></div>
+        ${sectionTabs(tab)}
+        ${contextBar()}
+        ${tab === 'issue' ? renderIssueTabContent() : tab === 'wrap' ? renderIssueWrapTab() : renderIssuanceWorkspace()}
+      </main>`;
+    }
+
+    // 发行标签页：inline registerAsset 表单
+    function renderIssueTabContent() {
+      const steps = [{ t: '填写资产信息', d: 'name / symbol / decimals 与链上元数据哈希' }, { t: '调用 registerAsset', d: '无许可，任何人可注册，同交易部署专属 RWAToken' }, { t: '成为 Asset Owner', d: '注册者自动获得该资产 owner 身份' }, { t: '进入资产详情', d: '可继续更新元数据 / 发起双签' }];
+      return `<div class="stack">
+        <section class="card card-pad">
+          <div class="section-title"><h3>发行新资产代币</h3>${callTag('AssetRegistry.registerAsset(metadataHash, name, symbol, decimals)')}</div>
+          <div class="flowbar" style="margin-bottom:18px">${flowBar(steps, 0)}</div>
+          <form id="reg-form" class="form-grid">
+            <div class="field full"><label for="reg-name">资产名称 *</label><input id="reg-name" class="input" name="name" required placeholder="如：US Treasury Token"></div>
+            <div class="field"><label for="reg-symbol">代币符号 *</label><input id="reg-symbol" class="input" name="symbol" required placeholder="如：htUST"></div>
+            <div class="field"><label for="reg-decimals">小数位数</label><input id="reg-decimals" class="input" name="decimals" type="number" min="0" max="18" value="18"></div>
+            <div class="field full"><label for="reg-file">上传资产说明文档（链下存储，仅用于计算哈希）</label>
+              <div class="row" style="gap:10px"><input id="reg-file" class="input" type="file" accept=".pdf,.doc,.docx,.md,.txt,.json,.xlsx" data-reg-file style="flex:1"><button class="btn small secondary" type="button" data-reg-file-btn>生成 metadataHash</button></div>
+              <p class="small quiet" style="margin:6px 0 0">metadataHash = keccak256(文档二进制内容)；文档 URI 随后通过 PoRRegistry.publishReserveProof 记录。</p>
+            </div>
+            <div class="field full"><label for="reg-hash">元数据哈希 metadataHash *</label><input id="reg-hash" class="input mono" name="metadataHash" required placeholder="0x + 64 位十六进制（keccak256）" style="font-size:12px"><p class="small quiet" style="margin:6px 0 0">选择上方文档后自动计算，或手动填写。</p></div>
+            <div class="field full"><button class="btn" type="submit">提交注册</button><p class="small quiet" style="margin-top:8px">注册后自动成为 Asset Owner，可进入「工作台」标签页管理。</p></div>
+          </form>
+        </section>
+        <section class="card card-pad"><div class="section-title"><h3>注册后的自动行为</h3></div><div class="edge-list">
+          <div class="edge-row"><div class="edge-from">registerAsset</div><div class="edge-via">→ 同交易</div><div class="edge-to">部署专属 RWAToken</div><div class="edge-cond">RWAToken 由注册者控制，随后 Mint 需双签</div></div>
+          <div class="edge-row"><div class="edge-from">AssetRegistered 事件</div><div class="edge-via">→ 落账</div><div class="edge-to">assetId = registry 内序号</div><div class="edge-cond">事件参数：assetId / owner / token / metadataHash / timestamp</div></div>
+          <div class="edge-row"><div class="edge-from">注册者</div><div class="edge-via">→ 自动成为</div><div class="edge-to">Asset Owner</div><div class="edge-cond">onlyOwner 函数：updateMetadataHash / transferAssetOwnership / deactivateAsset</div></div>
+        </div></section>
+      </div>`;
+    }
+
+    // 包装/解包装标签页：inline 兑换表单
+    function renderIssueWrapTab() {
+      const modeCards = [
+        { mode: 'Token Custody', desc: 'wrap 时底层资产 1:1 托管进 PSM，铸包装代币；unwrap 按比例返还底层。', tag: 'wrap / unwrap' },
+        { mode: 'Document Proof', desc: '链上不托管底层资产；wrap 需 PSM Authorized Signer 签名的 mintWithAuthorization；unwrap 仅支持全额并触发 ReleaseRequested。', tag: 'mintWithAuthorization' }
+      ];
+      return `<div class="stack">
+        <div class="grid two">${modeCards.map(m => `<article class="card card-pad"><div class="section-title"><h3>${m.mode}</h3>${callTag(m.tag)}</div><p class="small muted">${m.desc}</p></article>`).join('')}</div>
+        <section class="card card-pad"><div class="section-title"><h3>兑换操作</h3>${callTag('ReservePSM.wrap / unwrap / mintWithAuthorization')}</div>
+          <form id="wrap-form" class="form-grid">
+            <div class="field"><label for="wrap-asset">包装资产 *</label><select id="wrap-asset" class="select" name="wrappedId" data-wrap-asset>${WRAPPED.map(w => `<option value="${w.assetId}">${w.name}（${w.symbol} · ${w.modeLabel}）</option>`).join('')}</select></div>
+            <div class="field"><label for="wrap-dir">方向</label><select id="wrap-dir" class="select" name="direction" data-wrap-dir><option value="wrap">Wrap（铸包装代币）</option><option value="unwrap">Unwrap（赎回底层）</option></select></div>
+            <div class="field"><label for="wrap-amount">数量 *</label><input id="wrap-amount" class="input mono" name="amount" type="number" min="0.000001" step="any" placeholder="如 100" required></div>
+            <div class="field"><label for="wrap-to">接收地址 to *</label><input id="wrap-to" class="input mono" name="to" value="${escapeHtml(shortAddress(wallet().address))}" required></div>
+            <div id="wrap-proof-note" class="field full" style="display:none"><div class="op-alert">当前为 Document Proof 模式：需 PSM Authorized Signer 的授权签名。</div><div class="grid two" style="margin-top:12px">
+              <div class="field"><label>nonce *</label><input class="input mono" name="nonce" type="number" min="0" step="1" value="0" required></div>
+              <div class="field"><label>expiry（unix 秒）*</label><input class="input mono" name="expiry" type="number" min="0" step="1" value="${Math.floor(Date.now() / 1000) + 3600}" required></div>
+              <div class="field"><label>documentId（凭证标识）</label><input class="input mono" name="documentId" placeholder="0x... 或文档 ID"></div>
+            </div></div>
+            <div class="field full"><button class="btn" type="submit">确认兑换</button></div>
+          </form>
+        </section>
+        <section class="card card-pad"><div class="section-title"><h3>已配置的包装资产</h3><span class="badge">${WRAPPED.length}</span></div><div class="req-list">${WRAPPED.map(w => `<div class="req-item"><div class="req-main"><h4>${w.name} <span class="mono quiet">${w.symbol}</span></h4><p class="small muted">${w.modeLabel} · 包装代币 <span class="mono">${w.wrappedToken}</span></p></div>${statusBadge(w.paused ? 'paused' : 'active')}</div>`).join('')}</div></section>
+      </div>`;
+    }
+
+    // 工作台标签页：资产表格 + 角色入口（类似资产管理中心）
+    function renderIssuanceWorkspace() {
+      const entries = walletRoleEntries();
+      const issuanceRoles = entries.filter(en => ROLES[en.roleId]?.group === 'issuance');
+      const funcRoles = entries.filter(en => ROLES[en.roleId]?.group === 'functional');
+      const myAssets = ASSETS.filter(a => a.owner === myAddr());
+      const allAssets = ASSETS.map(a => {
+        const ws = state.issuanceWorkspaceAssets.find(x => x.id === a.id);
+        return { ...a, type: ws?.type || a.type || 'Token Custody', status: ws?.status || (a.active ? 'active' : 'paused') };
+      });
+      return `<div class="stack">
+        <div class="grid four">
+          <div class="stat card"><div class="stat-label"><span class="dot"></span>发行角色</div><div class="stat-value">${issuanceRoles.length}</div><div class="stat-foot">按对象派生</div></div>
+          <div class="stat card"><div class="stat-label"><span class="dot success"></span>功能身份</div><div class="stat-value">${funcRoles.length}</div><div class="stat-foot">Function 域</div></div>
+          <div class="stat card"><div class="stat-label"><span class="dot warning"></span>我的资产</div><div class="stat-value">${myAssets.length}</div><div class="stat-foot">Asset Owner</div></div>
+          <div class="stat card"><div class="stat-label"><span class="dot"></span>全部资产</div><div class="stat-value">${ASSETS.length}</div><div class="stat-foot">已注册</div></div>
+        </div>
+        <section class="card"><div class="section-title card-pad" style="margin-bottom:0;padding-bottom:0"><div class="eyebrow">Issuance assets</div><h3>资产工作台</h3></div><div class="table-wrap"><table><thead><tr><th>资产</th><th>合约地址</th><th>类型</th><th>状态</th><th>操作</th></tr></thead><tbody>${allAssets.length ? allAssets.map(a => `<tr><td><strong>${escapeHtml(a.name)}</strong><div class="small quiet mono">${a.symbol} · assetId #${a.id}</div></td><td class="mono small">${a.token}</td><td><span class="role-chip">${a.type}</span></td><td>${statusBadge(a.status)}</td><td><button class="table-link" data-route="#/assets/workspace/${a.id}">进入工作台 →</button></td></tr>`).join('') : `<tr><td colspan="5" class="empty"><h3>暂无资产</h3><p>切换到「发行」标签页注册第一个资产。</p><button class="btn" data-route="#/assets/register">去发行</button></td></tr>`}</tbody></table></div></section>
+        <p class="small quiet">点击「进入工作台 →」后先选定资产，左侧会列出当前钱包在该资产下具备的全部角色（发行 + 功能身份），再点角色进入对应操作面板，与「管理金库」的交互一致。</p>
+      </div>`;
+    }
+
+    function renderRegister() {
+      const steps = [{ t: '填写资产信息', d: 'name / symbol / decimals 与链上元数据哈希' }, { t: '调用 registerAsset', d: '无许可，任何人可注册，同交易部署专属 RWAToken' }, { t: '成为 Asset Owner', d: '注册者自动获得该资产 owner 身份' }, { t: '进入资产详情', d: '可继续更新元数据 / 发起双签' }];
+      return `${publicHeader('issuance', 'register')}<main class="page">
+        <div class="page-head"><div><div class="eyebrow">Issue asset</div><h1>发行新资产代币</h1><p>调用 AssetRegistry.registerAsset 注册资产，链上自动部署专属 RWAToken 并发出 AssetRegistered 事件。</p></div><div class="row"><button class="btn secondary" data-route="#/issuance/issue">返回发行</button></div></div>
+        ${contextBar()}
+        <div class="work-layout">
+          <div class="stack">
+            <section class="card card-pad">
+              <div class="section-title"><h3>资产信息</h3>${callTag('AssetRegistry.registerAsset(metadataHash, name, symbol, decimals)')}</div>
+              <div class="flowbar" style="margin-bottom:18px">${flowBar(steps, 0)}</div>
+              <form id="reg-form" class="form-grid">
+                <div class="field full"><label for="reg-name">资产名称 *</label><input id="reg-name" class="input" name="name" required placeholder="如：US Treasury Token"></div>
+                <div class="field"><label for="reg-symbol">代币符号 *</label><input id="reg-symbol" class="input" name="symbol" required placeholder="如：htUST"></div>
+                <div class="field"><label for="reg-decimals">小数位数</label><input id="reg-decimals" class="input" name="decimals" type="number" min="0" max="18" value="18"></div>
+                <div class="field full"><label for="reg-file">上传资产说明文档（链下存储，仅用于计算哈希）</label>
+                  <div class="row" style="gap:10px"><input id="reg-file" class="input" type="file" accept=".pdf,.doc,.docx,.md,.txt,.json,.xlsx" data-reg-file style="flex:1"><button class="btn small secondary" type="button" data-reg-file-btn>生成 metadataHash</button></div>
+                  <p class="small quiet" style="margin:6px 0 0">文档本体不上链：metadataHash = keccak256(文档二进制内容)（与 SDK/合约方案一致，ethers.keccak256(documentBytes)）；文档 URI 随后通过 PoRRegistry.publishReserveProof 记录。</p>
+                </div>
+                <div class="field full"><label for="reg-hash">元数据哈希 metadataHash *（自动生成后也可手动修正）</label><input id="reg-hash" class="input mono" name="metadataHash" required placeholder="0x + 64 位十六进制（keccak256）" style="font-size:12px"><p class="small quiet" style="margin:6px 0 0">选择上方文档后自动计算；空消息参考值 c5d24601…a470（keccak256("")）。</p></div>
+                <div class="field full"><button class="btn" type="submit">提交注册</button></div>
+              </form>
+            </section>
+            <section class="card card-pad"><div class="section-title"><h3>注册后的自动行为</h3></div><div class="edge-list">
+              <div class="edge-row"><div class="edge-from">registerAsset</div><div class="edge-via">→ 同交易</div><div class="edge-to">部署专属 RWAToken</div><div class="edge-cond">RWAToken 由注册者控制，随后 Mint 需双签</div></div>
+              <div class="edge-row"><div class="edge-from">AssetRegistered 事件</div><div class="edge-via">→ 落账</div><div class="edge-to">assetId = registry 内序号</div><div class="edge-cond">事件参数：assetId / owner / token / metadataHash / timestamp</div></div>
+              <div class="edge-row"><div class="edge-from">注册者</div><div class="edge-via">→ 自动成为</div><div class="edge-to">Asset Owner</div><div class="edge-cond">onlyOwner 函数：updateMetadataHash / transferAssetOwnership / deactivateAsset</div></div>
+            </div></section>
+          </div>
+          ${sidePanel({ contract: 'AssetRegistry.registerAsset', permission: '无许可（Permissionless）', permissionNote: '任何人可注册；注册者成为 Asset Owner；deactivateAsset 仅 Owner 可调', pre: '准备元数据文档并计算哈希', events: 'AssetRegistered(assetId, owner, token, metadataHash, timestamp)', next: '自动跳转资产详情（Asset Owner 视角）', note: '资产上链后仍需 Issuer + Token Agent 双签才能铸造流通代币。' })}
+        </div>
+      </main>`;
+    }
+
+    // ---------- 管理已发行资产代币 ----------
+    function renderManageAssets() {
+      if (!wallet()) return renderConnectPanel('管理已发行资产代币');
+      const myAssets = ASSETS.filter(a => a.owner === shortAddress(wallet().address));
+      return `${publicHeader('issuance', 'manage-assets')}<main class="page">
+        <div class="page-head"><div><div class="eyebrow">Asset owner</div><h1>管理已发行资产代币</h1><p>仅展示 owner 匹配当前钱包的资产；每个资产可进入详情页执行元数据更新、所有权转移、停用与双签操作。</p></div><div class="row"><button class="btn secondary" data-route="#/issuance/issue">返回发行</button></div></div>
+        ${contextBar(`<div class="context-item"><span>Scope</span><strong>Asset Owner 名下资产</strong></div>`)}
+        <section class="card"><div class="table-wrap"><table><thead><tr><th>资产</th><th>代币合约</th><th>NAV</th><th>状态</th><th>操作</th></tr></thead><tbody>${myAssets.length ? myAssets.map(a => `<tr><td><strong>${a.name}</strong><div class="small quiet mono">${a.symbol} · assetId #${a.id}</div></td><td class="mono small">${a.token}</td><td class="mono">${a.nav}</td><td>${statusBadge(a.active ? 'active' : 'paused')}</td><td><button class="table-link" data-route="#/assets/manage/${a.id}">详情 →</button></td></tr>`).join('') : `<tr><td colspan="5" class="empty"><h3>无已发行资产</h3><p>注册是开放的。</p><button class="btn" data-route="#/assets/register">去发行</button></td></tr>`}</tbody></table></div></section>
+      </main>`;
+    }
+
+    // ---------- 资产详情（委托给资产角色工作台：双栏布局，左侧角色侧栏） ----------
+    function renderAssetDetail(id) {
+      const asset = assetById(id);
+      if (!asset) return renderNotFound('资产不存在');
+      if (!wallet()) return renderConnectPanel('资产详情');
+      return assetRoleWorkspace(defaultAssetRole(id), id);
+    }
+
+    // ---------- Mint / Burn 双签工作台 ----------
+    function reqRow(type, req) {
+      const label = type === 'mint' ? 'Mint' : 'Burn';
+      const asset = assetById(req.assetId);
+      const canApprove = holdsAssetRole('token-agent', req.assetId) && req.status === 'pending';
+      return `<div class="req-item"><div class="req-main"><h4>${label} #${req.nonce} · ${escapeHtml(asset?.name || '未知资产')} ${callTag(type === 'mint' ? 'initiateMint' : 'initiateBurn')}</h4><p class="mono">amount ${req.amount} → ${req.to} · 发起人 ${shortAddress(req.initiator)}${req.approver ? ' · 批准人 ' + shortAddress(req.approver) : ''} · ${new Date(req.at).toLocaleTimeString()}</p></div><div class="row wrap">${req.status === 'approved' ? statusBadge('approved') : statusBadge('pending')}${canApprove ? `<button class="btn success small" data-approve="${type}:${req.nonce}">批准（Token Agent）</button>` : ''}</div></div>`;
+    }
+    function renderMintBurn(id) {
+      const asset = assetById(id);
+      if (!asset) return renderNotFound('资产不存在');
+      if (!wallet()) return renderConnectPanel('Mint / Burn 双签');
+      const canInitiate = holdsAssetRole('asset-owner', asset.id);
+      const pendingMints = state.mintReqs.filter(r => r.assetId === asset.id);
+      const pendingBurns = state.burnReqs.filter(r => r.assetId === asset.id);
+      return `${publicHeader('issuance', 'manage-assets')}<main class="page">
+        <div class="page-head"><div><div class="eyebrow">Dual signature</div><h1>Mint / Burn 双签工作台 <span class="mono quiet" style="font-size:18px">${asset.symbol}</span></h1><p>Issuer 发起申请 → Token Agent 批准执行，两个独立角色缺一不可。演示：先用 Alice 发起，再切换到 Bob 批准。</p></div><div class="row"><button class="btn secondary" data-route="#/assets/manage/${asset.id}">返回资产详情</button></div></div>
+        ${contextBar(`<div class="context-item"><span>Object</span><strong>${asset.symbol}</strong></div><div class="context-item"><span>Issuer</span><strong>${holdsAssetRole('asset-owner', asset.id) ? '当前账户' : '未持有'}</strong></div><div class="context-item"><span>Token Agent</span><strong>${holdsAssetRole('token-agent', asset.id) ? '当前账户' : '未持有'}</strong></div>`)}
+        <div class="work-layout">
+          <div class="stack">
+            <section class="card card-pad">
+              <div class="section-title"><h3>发起 ${canInitiate ? '（Issuer）' : '（需要 Issuer 角色）'}</h3>${callTag('MintBurnController.initiateMint / initiateBurn')}</div>
+              <div class="grid two">
+                <form id="mint-form" class="field"><label>发起 Mint</label><div class="row"><input class="input" name="amount" type="number" min="1" step="any" placeholder="数量" required><input class="input mono" name="to" placeholder="接收地址" value="${escapeHtml(shortAddress(wallet().address))}" required></div><button class="btn small" type="submit" ${canInitiate ? '' : 'disabled'} style="margin-top:10px">发起 Mint（第一签名）</button></form>
+                <form id="burn-form" class="field"><label>发起 Burn</label><div class="row"><input class="input" name="amount" type="number" min="1" step="any" placeholder="数量" required><input class="input mono" name="from" placeholder="销毁来源地址（initiateBurn 的 from）" value="${escapeHtml(shortAddress(wallet().address))}" required></div><button class="btn small secondary" type="submit" ${canInitiate ? '' : 'disabled'} style="margin-top:10px">发起 Burn（第一签名）</button></form>
+              </div>
+              <p class="small quiet" style="margin-top:10px">PR#12 的 initiateMint / approveMint 无签名参数：Issuer = 资产 Owner（ownerOf），Token Agent = Owner 通过 setTokenAgent 任命的地址。</p>
+            </section>
+            <section class="card card-pad"><div class="section-title"><h3>Mint 队列</h3><span class="badge">${pendingMints.length}</span></div><div class="req-list">${pendingMints.length ? pendingMints.map(r => reqRow('mint', r)).join('') : '<div class="empty" style="padding:22px"><h3 style="font-size:15px">暂无 Mint 请求</h3><p>由 Issuer 发起后出现在这里。</p></div>'}</div></section>
+            <section class="card card-pad"><div class="section-title"><h3>Burn 队列</h3><span class="badge">${pendingBurns.length}</span></div><div class="req-list">${pendingBurns.length ? pendingBurns.map(r => reqRow('burn', r)).join('') : '<div class="empty" style="padding:22px"><h3 style="font-size:15px">暂无 Burn 请求</h3><p>由 Issuer 发起后出现在这里。</p></div>'}</div></section>
+          </div>
+          ${sidePanel({ contract: 'MintBurnController', permission: '发起：资产 Owner（Issuer）· 批准：setTokenAgent 任命的 Token Agent', permissionNote: 'Issuer 与 Token Agent 是两个独立地址（owner 与任命者），双签确保铸销需两方协作', pre: '资产已注册（registerAsset 时内部部署并登记 MintBurnController）', events: 'MintInitiated(nonce) → MintApproved(nonce)；BurnInitiated(nonce) → BurnApproved(nonce)', next: '批准后自动执行 rwaToken.mint / burn，可返回资产详情查看', note: '演示：Alice 发起后请切换 Bob（token-agent）账户批准，才能看到 MintApproved。' })}
+        </div>
+      </main>`;
+    }
+
+    // ---------- 预言机数据（NAV） ----------
+    function renderOracle() {
+      if (!wallet()) return renderConnectPanel('预言机数据');
+      const rows = Object.entries(state.navRecords);
+      const steps = [{ t: '选择资产代币', d: '每个 rwaToken 有独立授权签名者（setSigner）' }, { t: 'EIP-712 签名', d: 'domain {name: NAVOracle, version: 1}；结构 NAVUpdate(rwaToken, price, dataTimestamp)' }, { t: '提交 updateNAV', d: '任何人可 relay：updateNAV(rwaToken, price, dataTimestamp, signature)' }, { t: 'NAV 落账', d: '校验签名、非零、非未来、单调递增与 +20% 上限后写入' }];
+      return `${publicHeader('issuance', 'oracle')}<main class="page">
+        <div class="page-head"><div><div class="eyebrow">Oracle</div><h1>预言机数据</h1><p>NAV Signer 对 NAVUpdate 结构做 EIP-712 签名后，任何人可 relay 提交 NAVOracle.updateNAV；合约校验签名、单调时间戳、非零与 +20% 向上偏差上限（NAV_DEVIATION_MAX_BPS=2000）。链上无时效限制，数据新鲜度由链下流程保障。</p></div><div class="row"><button class="btn secondary" data-route="#/issuance/issue">返回发行</button></div></div>
+        ${contextBar(`<div class="context-item"><span>Signer</span><strong>${hasRole('nav-signer') ? '当前账户（rwaToken 授权签名者）' : '未持有 nav-signer'}</strong></div>`)}
+        <div class="work-layout">
+          <div class="stack">
+            <section class="card card-pad">
+              <div class="section-title"><h3>提交 NAV 更新</h3>${callTag('NAVOracle.updateNAV(rwaToken, price, dataTimestamp, signature)')}</div>
+              <div class="flowbar" style="margin-bottom:18px">${flowBar(steps, 0)}</div>
+              <form id="nav-form" class="form-grid">
+                <div class="field"><label for="nav-token">资产代币 rwaToken *</label><select id="nav-token" class="select" name="rwaToken" data-nav-token>${ASSETS.map(a => `<option value="${a.id}">${escapeHtml(a.name)}（${a.symbol} · ${a.token}）</option>`).join('')}</select></div>
+                <div class="field"><label for="nav-value">NAV 数值 price *</label><input id="nav-value" class="input mono" name="nav" type="number" min="0.000001" step="any" placeholder="如 1.0186" required><p class="small quiet" style="margin-top:4px">合约要求 price &gt; 0（price == 0 直接 InvalidNAV）</p></div>
+                <div class="field full"><label for="nav-ts">数据时间戳 dataTimestamp（unix 秒）*</label><input id="nav-ts" class="input mono" name="dataTimestamp" value="${Math.floor(Date.now() / 1000)}" required><p class="small quiet" style="margin-top:4px">必须 ≤ 当前时间（dataTimestamp &gt; now 触发 FutureData），且较上次记录单调递增</p></div>
+                <div class="field full"><label>EIP-712 签名（演示预览）</label><div class="mono small muted" style="padding:10px 12px;background:var(--surface-soft);border:1px solid var(--line);border-radius:9px">typehash = keccak256("NAVUpdate(address rwaToken,uint256 price,uint256 dataTimestamp)")；domain = EIP712("NAVOracle", "1")；由 NAVOracle owner 通过 setSigner 任命的 Signer 私钥签名；本演示以角色判定代替真实签名</div></div>
+                <div class="field full"><button class="btn" type="submit" ${hasRole('nav-signer') ? '' : 'disabled'}>提交 NAV（签名者）</button>${hasRole('nav-signer') ? '' : '<p class="error-text">当前账户未持有 nav-signer（需 NAVOracle owner 通过 setSigner 任命），请切换到 Alice。</p>'}</div>
+              </form>
+            </section>
+            <section class="card"><div class="card-pad section-title"><h3>NAV 历史记录</h3><span class="badge">${rows.length}</span></div><div class="table-wrap"><table><thead><tr><th>资产代币</th><th>NAV</th><th>数据时间戳</th><th>签名者</th><th>提交时间</th></tr></thead><tbody>${rows.length ? rows.map(([assetId, rec]) => { const a = assetById(assetId); return `<tr><td><strong>${escapeHtml(a?.name || '#' + assetId)}</strong><div class="small quiet mono">${a ? a.token : ''}</div></td><td class="mono">${rec.nav}</td><td class="mono small">${rec.dataTimestamp}</td><td class="mono small">${shortAddress(rec.signer)}</td><td class="small">${rec.at ? new Date(rec.at).toLocaleTimeString() : '—'}</td></tr>`; }).join('') : `<tr><td colspan="5" class="empty"><h3>暂无 NAV 记录</h3><p>提交第一条 NAV 后在此展示。</p></td></tr>`}</tbody></table></div></section>
+          </div>
+          ${sidePanel({ contract: 'NAVOracle.updateNAV', permission: '提交：无许可 relay；签名：NAVOracle owner 通过 setSigner(rwaToken, signer) 授权（部署脚本中 owner=Governor）', permissionNote: 'digest = EIP-712（domain: NAVOracle v1）签名结构 NAVUpdate(rwaToken, price, dataTimestamp)；授权管理 setSigner / removeSigner / transferOwnership（仅 NAVOracle owner）', pre: '资产已注册且其 rwaToken 已绑定授权 Signer', events: 'NAVUpdated(rwaToken, price, dataTimestamp, updatedAt, signer)', next: '资产详情 / 金库详情展示最新 NAV', note: 'price=0、时间戳为未来、时间戳未递增、或较上次价格上涨超 20% 均会被合约拒绝。' })}
+        </div>
+      </main>`;
+    }
+
+    // ---------- 储备证明（PoR） ----------
+    function renderPor() {
+      if (!wallet()) return renderConnectPanel('储备证明');
+      // PoRRegistry：资产 owner 或该资产任命的 proofPublisherOf（逐对象权限，随所选资产变化）
+      const selAssetId = state.activePorAsset != null ? Number(state.activePorAsset) : (ASSETS[0] && ASSETS[0].id);
+      const canPublish = holdsAssetRole('proof-publisher', selAssetId) || holdsAssetRole('asset-owner', selAssetId);
+      const rows = state.proofs.slice().reverse();
+      return `${publicHeader('issuance', 'manage-assets')}<main class="page">
+        <div class="page-head"><div><div class="eyebrow">Proof of Reserve</div><h1>储备证明</h1><p>PoRRegistry 追加式记录资产储备证明文档：每次发布均留下不可修改的记录（append-only）。</p></div><div class="row"><button class="btn secondary" data-route="#/assets/manage/1">返回资产详情</button></div></div>
+        ${contextBar(`<div class="context-item"><span>Publisher</span><strong>${canPublish ? '当前账户（所选资产的 Owner 或任命的 Publisher）' : '未持有所选资产发布权限（需要该资产 Owner 或任命的 Publisher）'}</strong></div>`)}
+        <div class="work-layout">
+          <div class="stack">
+            <section class="card card-pad"><div class="section-title"><h3>发布储备证明</h3>${callTag('PoRRegistry.publishReserveProof(assetId, documentHash, uri)')}</div>
+              <form id="por-form" class="form-grid">
+                <div class="field"><label for="por-asset">资产 *</label><select id="por-asset" class="select" name="assetId" data-por-asset>${ASSETS.map(a => `<option value="${a.id}" ${a.id === selAssetId ? 'selected' : ''}>#${a.id} ${a.name}（${a.symbol}）${(holdsAssetRole('proof-publisher', a.id) || holdsAssetRole('asset-owner', a.id)) ? '· 可发布' : ''}</option>`).join('')}</select></div>
+                <div class="field"><label for="por-uri">证明文档 URI *（链下存储）</label><input id="por-uri" class="input" name="uri" placeholder="ipfs:// 或 https://..." required></div>
+                <div class="field full"><label for="por-file">上传证明文档（仅用于计算哈希，链上只存哈希 + URI）</label>
+                  <div class="row" style="gap:10px"><input id="por-file" class="input" type="file" accept=".pdf,.doc,.docx,.md,.txt,.json,.xlsx" data-por-file style="flex:1"><button class="btn small secondary" type="button" data-por-file-btn>生成 documentHash</button></div>
+                  <p class="small quiet" style="margin:6px 0 0">documentHash = keccak256(文档内容)（function-reference：integrity anchor），与 PoRRegistry 校验一致。</p>
+                </div>
+                <div class="field full"><label for="por-hash">文档哈希 documentHash *（自动生成后也可手动修正）</label><input id="por-hash" class="input mono" name="documentHash" placeholder="0x + 64 位十六进制（keccak256）" required></div>
+                <div class="field full"><button class="btn" type="submit" ${canPublish ? '' : 'disabled'}>发布证明</button>${canPublish ? '' : '<p class="error-text">所选资产需要 Owner 或任命的 Proof Publisher 才能发布；切换有「可发布」标记的资产，或切换到 Carol。</p>'}</div>
+              </form>
+            </section>
+            <section class="card"><div class="card-pad section-title"><h3>历史记录（append-only）</h3><span class="badge">${rows.length}</span></div><div class="table-wrap"><table><thead><tr><th>资产</th><th>文档哈希</th><th>URI</th><th>发布者</th><th>时间</th></tr></thead><tbody>${rows.length ? rows.map(p => `<tr><td><strong>${escapeHtml(assetById(p.assetId)?.name || '#' + p.assetId)}</strong></td><td class="mono small">${p.documentHash}</td><td class="small">${escapeHtml(p.uri)}</td><td class="mono small">${shortAddress(p.publisher)}</td><td class="small">${new Date(p.at).toLocaleTimeString()}</td></tr>`).join('') : `<tr><td colspan="5" class="empty"><h3>暂无证明记录</h3><p>发布第一条储备证明后在此展示。</p></td></tr>`}</tbody></table></div></section>
+          </div>
+          ${sidePanel({ contract: 'PoRRegistry.publishReserveProof', permission: '资产 Owner，或 setProofPublisher 任命的 Publisher', permissionNote: '记录不可修改、不可删除（append-only）', pre: '资产已注册', events: 'ReserveProofPublished(assetId, documentHash, uri, publisher)', next: '资产详情展示证明数量', note: '文档本身存储于链下（IPFS/HTTP），链上只存哈希与 URI。' })}
+        </div>
+      </main>`;
+    }
+
+    // PSM 按包装资产任命签名者（wrapperController 通过 setAuthorizedSigner）：状态提示供 wrap 页 / 提交函数共用
+    function psmSignerStatus(w) {
+      if (!w) return '';
+      if (!w.signer) return '<span class="small muted">尚未任命签名者（wrapperController 调用 setAuthorizedSigner）</span>';
+      if (w.signer === myAddr()) return '<span class="badge success">你已被任命为该资产签名者，可签</span>';
+      return `<span class="small muted">该资产签名者：${holderName(w.signer)}（<span class="mono">${shortAddress(w.signer)}</span>）；切换到对应账户即可签名</span>`;
+    }
+
+    // ---------- 包装或解包装（ReservePSM 双模式） ----------
+    function renderWrap() {
+      if (!wallet()) return renderConnectPanel('包装或解包装');
+      const modeCards = [
+        { mode: 'Token Custody', desc: 'wrap 时底层资产 1:1 托管进 PSM，铸包装代币；unwrap 按比例返还底层。典型场景：原生币 / 稳定币。', tag: 'wrap / unwrap' },
+        { mode: 'Document Proof', desc: '链上不托管底层资产；wrap 需 PSM Authorized Signer 签名的 mintWithAuthorization（含 nonce/expiry/signature/documentId）；unwrap 仅支持全额并触发 ReleaseRequested 供链外释放。', tag: 'mintWithAuthorization' }
+      ];
+      return `${publicHeader('issuance', 'wrap')}<main class="page">
+        <div class="page-head"><div><div class="eyebrow">Reserve PSM</div><h1>包装或解包装</h1><p>ReservePSM 两种模式：Token Custody（1:1 托管铸币）与 Document Proof（凭证签名铸币）。兑换本身无许可，任何钱包可用。</p></div><div class="row"><button class="btn secondary" data-route="#/issuance/issue">返回发行</button></div></div>
+        ${contextBar()}
+        <div class="grid two">${modeCards.map(m => `<article class="card card-pad"><div class="section-title"><h3>${m.mode}</h3>${callTag(m.tag)}</div><p class="small muted">${m.desc}</p></article>`).join('')}</div>
+        <div class="work-layout" style="margin-top:16px">
+          <div class="stack">
+            <section class="card card-pad"><div class="section-title"><h3>兑换操作</h3>${callTag('ReservePSM.wrap / unwrap / mintWithAuthorization')}</div>
+              <form id="wrap-form" class="form-grid">
+                <div class="field"><label for="wrap-asset">包装资产 *</label><select id="wrap-asset" class="select" name="wrappedId" data-wrap-asset>${WRAPPED.map(w => `<option value="${w.assetId}">${w.name}（${w.symbol} · ${w.modeLabel}）</option>`).join('')}</select></div>
+                <div class="field"><label for="wrap-dir">方向</label><select id="wrap-dir" class="select" name="direction" data-wrap-dir><option value="wrap">Wrap（铸包装代币）</option><option value="unwrap">Unwrap（赎回底层）</option></select></div>
+                <div class="field"><label for="wrap-amount">数量 *</label><input id="wrap-amount" class="input mono" name="amount" type="number" min="0.000001" step="any" placeholder="如 100" required></div>
+                <div class="field"><label for="wrap-to">接收地址 to *</label><input id="wrap-to" class="input mono" name="to" value="${escapeHtml(shortAddress(wallet().address))}" required><p class="small quiet" style="margin-top:4px">wrap / unwrap / mintWithAuthorization 均含 to 参数（ZeroAddress 拒绝）</p></div>
+                <div id="wrap-proof-note" class="field full" style="display:none"><div class="op-alert">当前为 Document Proof 模式：需该包装资产任命的 PSM Authorized Signer（setAuthorizedSigner）授权签名（nonce / expiry / signature / documentId）。<span id="wrap-signer-status">${psmSignerStatus(WRAPPED[0])}</span></div><div class="grid two" style="margin-top:12px">
+                  <div class="field"><label>nonce *</label><input class="input mono" name="nonce" type="number" min="0" step="1" value="0" required></div>
+                  <div class="field"><label>expiry（unix 秒）*</label><input class="input mono" name="expiry" type="number" min="0" step="1" value="${Math.floor(Date.now() / 1000) + 3600}" required></div>
+                  <div class="field"><label>documentId（凭证标识）</label><input class="input mono" name="documentId" placeholder="0x... 或文档 ID"></div>
+                  <div class="field"><label>signature（演示预览）</label><input class="input mono" name="signature" value="0x…（演示以角色判定代替：digest = keccak256(abi.encode(assetId, amount, to, nonce, expiry, psm, chainid)) 后 eth_sign）" readonly></div>
+                </div></div>
+                <div class="field full"><button class="btn" type="submit">确认兑换</button><p class="small quiet" style="margin-top:8px">mode0 托管模式直接执行；mode1 凭证模式按当前账户是否 PSM Authorized Signer 判定签名（Bob 可签）。</p></div>
+              </form>
+            </section>
+            <section class="card card-pad"><div class="section-title"><h3>已配置的包装资产</h3><span class="badge">${WRAPPED.length}</span></div><div class="req-list">${WRAPPED.map(w => `<div class="req-item"><div class="req-main"><h4>${w.name} <span class="mono quiet">${w.symbol}</span></h4><p class="small muted">${w.modeLabel} · 包装代币 <span class="mono">${w.wrappedToken}</span> · ${w.allowPartial ? '支持部分赎回' : '仅全额赎回'}</p></div>${statusBadge(w.paused ? 'paused' : 'active')}</div>`).join('')}</div></section>
+          </div>
+          ${sidePanel({ contract: 'ReservePSM', permission: 'wrap / unwrap：无许可；mintWithAuthorization：Wrapper Controller 任命的 authorizedSigner 签名', permissionNote: 'deployWrappedToken 无许可（部署者=Wrapper Controller）；pause 全局=Governor；pauseAsset=Wrapper Controller', pre: '包装资产已部署（deployWrappedToken，部署者成为 Controller）', events: 'Wrapped / Unwrapped / ReleaseRequested / MintedWithAuthorization', next: '包装代币可在任意地址间自由流转（WrappedAsset 仅 PSM 可铸/销）', note: 'Proof 模式 unwrap 仅支持全额，部分赎回会被合约拒绝。' })}
+        </div>
+      </main>`;
+    }
+
+    // ---------- 管理包装资产代币（部署无许可，管理=Wrapper Controller） ----------
+    function renderWrapped() {
+      if (!wallet()) return renderConnectPanel('管理包装资产代币');
+      const isController = w => (w.controller && w.controller === shortAddress(wallet().address)) || hasRole('governor');
+      return `${publicHeader('issuance', 'wrapped')}<main class="page">
+        <div class="page-head"><div><div class="eyebrow">Wrapped assets</div><h1>管理包装资产代币</h1><p>deployWrappedToken 无许可：任何账户可部署，部署者自动成为该资产的 Wrapper Controller；pauseAsset（单资产暂停）由 Controller 调用，pause（全局暂停）仅 Governor。</p></div><div class="row"><button class="btn secondary" data-route="#/issuance/issue">返回发行</button></div></div>
+        ${contextBar()}
+        <section class="card"><div class="card-pad section-title"><h3>包装资产清单</h3>${callTag('ReservePSM.pauseAsset / pause / setAuthorizedSigner')}</div><div class="table-wrap"><table><thead><tr><th>包装资产</th><th>模式</th><th>底层 / 底层代币</th><th>包装代币</th><th>赎回规则</th><th>Controller</th><th>状态</th><th>操作</th></tr></thead><tbody>${WRAPPED.map(w => `<tr><td><strong>${w.name}</strong><div class="small quiet mono">${w.symbol}</div></td><td><span class="role-chip">${w.modeLabel}</span></td><td class="small">${w.underlying}<div class="mono quiet">${w.underlyingToken}</div></td><td class="mono small">${w.wrappedToken}</td><td class="small">${w.allowPartial ? '按比例部分赎回' : '仅全额赎回'}</td><td class="mono small">${w.controller || '—'}</td><td>${statusBadge(w.paused ? 'paused' : 'active')}</td><td>${isController(w) ? `<div class="row wrap"><button class="btn small ${w.paused ? 'success' : 'warning'}" data-toggle-pause="${w.assetId}">${w.paused ? '恢复' : '暂停'}</button>${w.mode === 1 ? `<button class="btn small secondary" data-toast="演示：setAuthorizedSigner(assetId, signer) 由 Wrapper Controller 任命铸币签名者">管理签名者</button>` : ''}</div>` : '<span class="badge neutral">需 Controller</span>'}</td></tr>`).join('')}</tbody></table></div></section>
+        <section class="section card card-pad"><div class="section-title"><h3>部署新包装资产</h3>${callTag('deployWrappedToken(assetId, mode, underlyingToken, name, symbol, decimals, allowPartialUnwrap)')}</div><p class="small muted" style="margin-bottom:14px">无许可：任何账户可部署，部署者自动成为该资产的 Wrapper Controller（controllerOf[assetId] = msg.sender）。Document Proof 模式合约强制 underlyingToken == 0 且 allowPartialUnwrap == false。</p><form id="wrapped-form" class="form-grid"><div class="field"><label>关联资产 assetId *</label><select class="select" name="assetId">${ASSETS.map(a => `<option value="${a.id}">#${a.id} ${escapeHtml(a.name)}（${a.symbol}）</option>`).join('')}</select></div><div class="field"><label>名称 *</label><input class="input" name="name" placeholder="Wrapped US Treasury" required></div><div class="field"><label>符号 *</label><input class="input" name="symbol" placeholder="whtUST" required></div><div class="field"><label>模式 *</label><select class="select" name="mode" data-wrapped-mode><option value="0">Token Custody（托管）</option><option value="1">Document Proof（凭证）</option></select></div><div class="field"><label>小数位数 decimals</label><input class="input" name="decimals" type="number" min="0" max="18" value="18"></div><div class="field"><label>允许部分赎回 allowPartialUnwrap</label><select class="select" name="allowPartialUnwrap"><option value="false">否（仅全额赎回）</option><option value="true">是（按比例部分赎回）</option></select></div><div class="field" id="wrapped-underlying-field"><label>底层资产地址 underlyingToken</label><input class="input mono" name="underlyingToken" placeholder="0x...（Proof 模式强制为 0x0）"></div><div class="field full"><button class="btn" type="submit">部署包装资产</button><p class="small quiet" style="margin-top:8px">部署后你可作为 Wrapper Controller 暂停/恢复该资产、为 Proof 模式任命签名者。</p></div></form></section>
+      </main>`;
+    }
+
+    // =====================================================================
+    //  资产管理域（Vault）：create → manage → detail
+    // =====================================================================
+
+    // ---------- 金库角色工作台共用件（双栏布局：业务页面 / 我的角色 + 操作区） ----------
+    // 左侧 sidebar：业务总览 / My Access / 我的角色（当前钱包拥有的全部金库域角色，可切换进入）
+    function roleSidebar(activeRole, vaultId) {
+      const me = myAddr();
+      const appointed = vaultAppointedRoles(vaultId);
+      return `<aside class="sidebar card"><div class="side-section"><div class="side-label">业务页面</div><button class="side-link" data-route="#/vaults">业务总览</button><button class="side-link" data-route="#/access">My Access</button></div><div class="side-section"><div class="side-label">本金库已任命角色</div>${appointed.length ? appointed.map(r => {
+        const ops = r.multi ? getSettlementOps(vaultId) : null;
+        const held = r.multi ? ops.operators.includes(me) : r.address === me;
+        const holder = r.multi ? `${ops.operators.length} 名 operator · ${ops.threshold} 签` : holderName(r.address);
+        return `<button class="side-link ${r.roleId === activeRole ? 'active' : ''}" data-route="#/workspace/${r.roleId}/${vaultId}">${ROLES[r.roleId].label}<small>${ROLES[r.roleId].contract.split('（')[0]} · ${holder}${held ? ' · ★我持有' : ''}</small></button>`;
+      }).join('') : '<div class="small muted" style="padding:10px">尚未任命任何角色</div>'}</div></aside>`;
+    }
+
+    // 最近 Activity 表格（pr12 activities = {text, at, ops?}）
+    function activityTable(rows) {
+      const fmt = at => new Date(at).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+      return `<div class="table-wrap"><table><thead><tr><th>时间</th><th>事件</th><th>来源</th></tr></thead><tbody>${rows.length ? rows.map(a => `<tr><td class="mono small">${fmt(a.at)}</td><td>${escapeHtml(a.text)}</td><td>${a.ops ? '<span class="badge neutral">Ops 后台</span>' : '<span class="badge">本工作台</span>'}</td></tr>`).join('') : '<tr><td colspan="3" class="empty" style="padding:26px">暂无 Activity 记录，执行操作后这里会展示事件流水。</td></tr>'}</tbody></table></div>`;
+    }
+
+    // 金库域角色可执行操作（按角色生成，动作映射到现有 data-* 交互）
+    function vaultRoleActions(roleId, vault) {
+      const isOwner = vault.owner === shortAddress(wallet().address);
+      const actions = [];
+      if (roleId === 'vault-owner') {
+        actions.push({ h: '管理金库角色', p: 'IVaultRoles · setCurator / setGuardian / setAllocator / setKeeper / transferOwnership（仅 Owner）', btn: '<button class="btn small" data-scroll="vault-roles">管理角色</button>' });
+        actions.push({ h: '发起网站上架申请', p: 'Vault Owner · 提交运营资料，进入 Ops 审核队列', btn: isOwner ? (vault.status === 'submitted' ? '<span class="badge warning">已提交待审核</span>' : `<button class="btn small secondary" data-submit-listing="${vault.id}">提交申请</button>`) : '<span class="badge neutral">非 Owner</span>' });
+        actions.push({ h: '更新 NAV', p: 'NAV Signer · 跳转预言机数据页签名提交', btn: '<button class="btn small secondary" data-route="#/assets/oracle">去更新</button>' });
+        actions.push({ h: '查看产品页', p: '公开展示 · 上架后对访客可见', btn: '<button class="btn small secondary" data-route="#/products">查看 Products</button>' });
+      } else if (roleId === 'curator') {
+        actions.push({ h: '添加 Adapter', p: 'addAdapter · CONFIGURING 阶段由 Owner 直调，此后经 VaultTimelock 执行', btn: '<button class="btn small" data-toast="演示：addAdapter 配置已进入 VaultTimelock 队列">发起配置</button>' });
+        actions.push({ h: '设置性能费', p: 'setPerformanceFeeBps · 上限 500 bps（MAX_PERFORMANCE_FEE_BPS），经 VaultTimelock 执行', btn: '<button class="btn small secondary" data-toast="演示：setPerformanceFeeBps 已进入 VaultTimelock 队列">发起配置</button>' });
+        actions.push({ h: '调整策略上限', p: '风险参数 / Gate 配置 · 经 VaultTimelock 执行', btn: '<button class="btn small secondary" data-toast="演示：策略参数变更已进入 VaultTimelock 队列">发起配置</button>' });
+      } else if (roleId === 'guardian') {
+        actions.push({ h: '暂停新存款', p: 'BaseVault.pauseDeposits · GUARDIAN_ROLE 紧急保护', btn: '<button class="btn small" data-toast="演示：pauseDeposits 已暂停新存款（Guardian 保护）">执行暂停</button>' });
+        actions.push({ h: '取消待执行变更', p: 'VaultTimelock.cancelPendingChange · 取消排队中的配置变更', btn: '<button class="btn small secondary" data-toast="演示：cancelPendingChange 已取消待执行变更">取消变更</button>' });
+      } else if (roleId === 'allocator') {
+        actions.push({ h: '执行资金分配', p: 'LiquidityBridge.allocate · ALLOCATOR_ROLE 在已批准范围内分配资金', btn: '<button class="btn small" data-toast="演示：allocate 已执行资金分配">执行分配</button>' });
+        actions.push({ h: '发起再平衡', p: 'LiquidityBridge.rebalance · 调整各适配器仓位', btn: '<button class="btn small secondary" data-toast="演示：rebalance 已发起再平衡">发起再平衡</button>' });
+      } else if (roleId === 'keeper') {
+        actions.push({ h: '推进生命周期', p: 'BaseVault.advanceProductState / advanceCycleState · KEEPER_ROLE 周期推进', btn: '<button class="btn small" data-toast="演示：生命周期状态已推进">推进周期</button>' });
+        actions.push({ h: '处理到期队列', p: 'Queue · 处理到期请求并触发结算窗口', btn: '<button class="btn small secondary" data-toast="演示：到期队列已处理">处理队列</button>' });
+      }
+      return actions;
+    }
+
+    // ---------- Settlement Operator 工作台（Settlement 合约 per-vault operator，M-of-N eth_sign） ----------
+    function demoInstrHash(vaultId, data) {
+      const base = vaultId + ':' + data.cycle + ':' + data.depositTotal + ':' + data.redeemTotal;
+      let out = '', h = 2166136261;
+      for (let round = 0; round < 8; round++) {
+        for (let i = 0; i < base.length; i++) h = Math.imul(h ^ base.charCodeAt(i), 16777619) >>> 0;
+        out += h.toString(16).padStart(8, '0');
+        h = (h + Math.imul(round + 1, 0x9e3779b9)) >>> 0;
+      }
+      return '0x' + out.slice(0, 64);
+    }
+    function settleInstructionHash(vaultId) { return demoInstrHash(vaultId, settlementDemoData(vaultId)); }
+
+    function settlementOperatorWorkspace(vaultId) {
+      const vault = vaultById(vaultId) || VAULTS[0];
+      const ops = getSettlementOps(vault.id);
+      const me = myAddr();
+      const isOp = ops.operators.includes(me);
+      const isOwner = vault.owner === me;
+      const data = settlementDemoData(vault.id);
+      const hash = settleInstructionHash(vault.id);
+      const sigs = (state.settlementOps[vault.id] && state.settlementOps[vault.id].signatures[hash]) || [];
+      const enough = sigs.length >= ops.threshold && ops.threshold > 0;
+      const distribution = Math.min(Math.max(data.redeemTotal - data.depositTotal, 0), data.poolAvailable);
+      const fmt = at => new Date(at).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+      return `${publicHeader('vaults')}<main class="page">
+        <div class="workspace-shell">${roleSidebar('settlement-operator', vault.id)}<section class="workspace-main stack">
+          <div class="page-head"><div><div class="eyebrow">${vault.symbol} · Settlement Operator workspace</div><h1>${escapeHtml(vault.name)} <span class="mono quiet" style="font-size:18px">${vault.symbol}</span></h1><p>Settlement 合约的 per-vault operator：读队列深度与 NAV → FIFO 选前缀算轧差 → eth_sign 签名（M-of-N）→ 提交 submitBatch。</p></div><div class="row"><span class="badge ${isOp ? 'success' : 'neutral'}">${isOp ? '★ 我是 operator' : '非 operator'}</span><span class="badge">${ops.threshold}-of-${ops.operators.length} 多签</span></div></div>
+          <div class="card card-pad" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span class="small muted">切换要结算的金库：</span>${VAULTS.map(v => `<button class="btn small ${v.id === vault.id ? '' : 'secondary'}" data-route="#/workspace/settlement-operator/${v.id}">${v.symbol}</button>`).join('')}</div>
+          ${!isOp ? `<div class="op-alert" style="margin-bottom:4px">你当前不是本金库的 Settlement Operator，以下为只读视图。需 Vault Owner 通过 <span class="mono">setOperator(vault, 地址, true)</span> 任命你。</div>` : ''}
+          <div class="grid four">
+            <div class="stat card"><div class="stat-label"><span class="dot"></span>当前周期</div><div class="stat-value">#${data.cycle}</div><div class="stat-foot">阶段 ${data.phase}</div></div>
+            <div class="stat card"><div class="stat-label"><span class="dot warning"></span>申购队列（FIFO）</div><div class="stat-value">${data.deposit.length}</div><div class="stat-foot">合计 ${data.depositTotal.toLocaleString()} USDT</div></div>
+            <div class="stat card"><div class="stat-label"><span class="dot"></span>赎回队列（FIFO）</div><div class="stat-value">${data.redeem.length}</div><div class="stat-foot">合计 ${data.redeemTotal.toLocaleString()} USDT</div></div>
+            <div class="stat card"><div class="stat-label"><span class="dot success"></span>UnifiedPool 可用</div><div class="stat-value" style="font-size:20px">${data.poolAvailable.toLocaleString()}</div><div class="stat-foot">cap ${data.cap.toLocaleString()} · NAV ${data.nav}</div></div>
+          </div>
+          <article class="card card-pad"><div class="section-title"><h3>① 队列浏览器（FIFO）</h3><span class="badge neutral">来自 Indexer API</span></div>
+            <p class="small muted" style="margin-bottom:12px">按入队顺序从队头取前缀：depositRequestIds / redeemRequestIds。真实实现从 indexer 读取每条请求的深度与状态。</p>
+            <div class="grid two" style="gap:16px">
+              <div><div class="small strong" style="margin-bottom:6px">申购队列（PENDING）</div><div class="table-wrap"><table><thead><tr><th>#</th><th>请求 ID</th><th>用户</th><th>金额</th></tr></thead><tbody>${data.deposit.map((x, i) => `<tr><td class="mono small">${i + 1}</td><td class="mono small">${x.id}</td><td class="small">${x.from}</td><td class="mono small">${Number(x.amount).toLocaleString()}</td></tr>`).join('')}</tbody></table></div></div>
+              <div><div class="small strong" style="margin-bottom:6px">赎回队列（PENDING）</div><div class="table-wrap"><table><thead><tr><th>#</th><th>请求 ID</th><th>用户</th><th>金额</th></tr></thead><tbody>${data.redeem.map((x, i) => `<tr><td class="mono small">${i + 1}</td><td class="mono small">${x.id}</td><td class="small">${x.from}</td><td class="mono small">${Number(x.amount).toLocaleString()}</td></tr>`).join('')}</tbody></table></div></div>
+            </div>
+          </article>
+          <article class="card card-pad"><div class="section-title"><h3>② 轧差计算器</h3><span class="badge neutral">SettlementInstruction</span></div>
+            <div class="grid four">
+              <div class="stat card"><div class="stat-label">申购合计</div><div class="stat-value" style="font-size:20px">${data.depositTotal.toLocaleString()}</div></div>
+              <div class="stat card"><div class="stat-label">赎回合计</div><div class="stat-value" style="font-size:20px">${data.redeemTotal.toLocaleString()}</div></div>
+              <div class="stat card"><div class="stat-label">轧差净额</div><div class="stat-value" style="font-size:20px">${data.net.toLocaleString()}</div></div>
+              <div class="stat card"><div class="stat-label">应付 distribution</div><div class="stat-value" style="font-size:20px">${distribution.toLocaleString()}</div><div class="stat-foot">受可用资金约束</div></div>
+            </div>
+            <p class="small quiet" style="margin-top:12px">轧差净额 = 赎回合计 − 申购合计；distribution.amount 取「轧差净额」与「UnifiedPool 可用资金」的较小值（资金守恒）。若链上 revert（超 AUM / 流动性不足），缩小前缀重来。</p>
+          </article>
+          <article class="card card-pad"><div class="section-title"><h3>③ 签名收集（${ops.threshold}-of-${ops.operators.length}，eth_sign）</h3><span class="badge ${enough ? 'success' : 'warning'}">${sigs.length}/${ops.threshold} 已签</span></div>
+            <p class="small muted" style="margin-bottom:10px">指令哈希：<span class="mono small">${hash}</span></p>
+            <div class="req-list" style="margin-bottom:12px">${ops.operators.map(addr => { const signed = sigs.includes(addr); return `<div class="req-item"><div class="req-main"><h4>${holderName(addr)}</h4><p class="small muted mono">${addr}</p></div>${signed ? '<span class="badge success">已签名</span>' : '<span class="badge neutral">待签名</span>'}</div>`; }).join('') || '<div class="small muted">尚未任命任何 operator</div>'}</div>
+            ${isOp ? `<div class="row wrap">${sigs.includes(me) ? '<span class="badge success">你已签名</span>' : `<button class="btn small" data-settle-sign="${vault.id}">对指令做 eth_sign 签名</button>`}<button class="btn small ${enough ? '' : 'secondary'}" data-settle-submit="${vault.id}" ${enough ? '' : 'disabled'}>提交 submitBatch</button><button class="btn small secondary" data-settle-final="${vault.id}">confirmFinalSettlement</button></div>` : '<span class="badge neutral">非 operator：仅可只读查看</span>'}
+            <p class="small quiet" style="margin-top:10px">签名可分别完成，不要求同时在线；凑够 threshold 后任意 operator（或 relayer）可提交。confirmFinalSettlement 仅 operator 可执行（KeeperBot 无 operator 私钥，不可代做）。</p>
+          </article>
+          <article class="card card-pad"><div class="section-title"><h3>④ 历史结算记录</h3><span class="badge">${ops.history.length}</span></div>
+            <div class="table-wrap"><table><thead><tr><th>时间</th><th>周期</th><th>指令哈希</th><th>轧差净额</th><th>签名</th></tr></thead><tbody>${ops.history.length ? ops.history.map(h => `<tr><td class="mono small">${fmt(h.at)}</td><td class="mono small">#${h.cycle}</td><td class="mono small">${h.hash.slice(0, 14)}…</td><td class="mono small">${Number(h.net).toLocaleString()}</td><td class="small">${h.signers}/${h.threshold} 签</td></tr>`).join('') : '<tr><td colspan="5" class="empty" style="padding:26px">暂无历史结算记录。</td></tr>'}</tbody></table></div>
+          </article>
+          ${isOwner ? `<article class="card card-pad"><div class="section-title"><h3>管理 Operator（Vault Owner）</h3><span class="badge neutral">setOperator / setThreshold</span></div><p class="small muted" style="margin-bottom:12px">Settlement 合约自己管理 per-vault operator（不在 IVaultRoles 里）。Vault Owner 可任命 / 移除 operator 并调整多签阈值。</p><form id="settle-ops-form" class="grid two" style="gap:14px"><input type="hidden" name="vaultId" value="${vault.id}"><div class="field"><label>operator 地址</label><input class="input mono small" name="opAddr" placeholder="0x… 任命或留空移除"></div><div class="field"><label>多签阈值 threshold</label><input class="input small" name="threshold" type="number" min="1" value="${ops.threshold || 1}"></div><button class="btn" type="submit" style="grid-column:1/-1;justify-self:start">保存 operator 配置</button></form></article>` : ''}
+        </section></div>
+      </main>`;
+    }
+
+    // 金库角色工作台：左侧 roleSidebar + 右侧（capability / stat 卡 / 可执行操作 / 角色表单 / 最近 Activity）
+    function vaultRoleWorkspace(roleId, vaultId) {
+      const vault = vaultById(vaultId) || VAULTS[0];
+      if (roleId === 'settlement-operator') return settlementOperatorWorkspace(vault.id);
+      const role = ROLES[roleId];
+      const missing = missingRoles('vaults', vault.id, VAULT_REQUIRED_ROLES);
+      if (missing.length) return renderVaultAppointmentGate(vault, roleId, missing);
+      const isOwner = vault.owner === shortAddress(wallet().address);
+      const navRec = vault.assetId ? state.navRecords[vault.assetId] : null;
+      const actions = vaultRoleActions(roleId, vault);
+      const vaultActivities = state.activities.filter(a => (a.text || '').includes(vault.symbol) || (a.text || '').includes(vault.name)).slice(0, 5);
+      const todoCount = Math.min(actions.length + (vault.status === 'submitted' ? 1 : 0), 5);
+      return `${publicHeader('vaults')}<main class="page">
+        <div class="workspace-shell">${roleSidebar(roleId, vault.id)}<section class="workspace-main stack">
+          <div class="page-head"><div><div class="eyebrow">${vault.symbol} · ${role.label} workspace</div><h1>${escapeHtml(vault.name)} <span class="mono quiet" style="font-size:18px">${vault.symbol}</span></h1><p>${role.summary}</p></div><div class="row"><span class="badge success">权限已确认</span></div></div>
+          <div class="capability card"><div class="row between wrap"><div><strong>权限来源</strong><div class="small muted" style="margin-top:4px">${networkLabel()} · ${shortAddress(wallet().address)} · <span class="mono">${vault.address}</span></div></div><div class="row wrap">${statusBadge(vault.status === 'listed' ? 'listed' : vault.status === 'submitted' ? 'submitted' : 'pending')}<span class="role-chip">${vault.type}</span>${isOwner ? '<span class="badge success">Owner</span>' : ''}</div></div></div>
+          <div class="grid four">
+            <div class="stat card"><div class="stat-label"><span class="dot warning"></span>待办任务</div><div class="stat-value">${todoCount}</div><div class="stat-foot">按紧急度排序</div></div>
+            <div class="stat card"><div class="stat-label"><span class="dot"></span>可执行操作</div><div class="stat-value">${actions.length}</div><div class="stat-foot">当前角色</div></div>
+            <div class="stat card"><div class="stat-label"><span class="dot success"></span>今日交易</div><div class="stat-value">${vaultActivities.length}</div><div class="stat-foot">本金库 Activity</div></div>
+            <div class="stat card"><div class="stat-label"><span class="dot"></span>最新 NAV</div><div class="stat-value" style="font-size:20px">${navRec ? navRec.nav : vault.nav}</div><div class="stat-foot">${navRec ? '来自 NAVOracle' : '演示默认值'}</div></div>
+          </div>
+          <article class="card card-pad"><div class="section-title"><h3>可执行操作</h3><span class="badge neutral">合约映射</span></div><div class="action-list">${actions.map(a => `<div class="action-row"><div><h4>${a.h}</h4><p>${a.p}</p></div>${a.btn}</div>`).join('')}</div></article>
+          ${roleId === 'vault-owner' ? `<section class="card card-pad" id="vault-roles"><div class="section-title"><h3>IVaultRoles · 金库角色管理</h3><span class="badge neutral">${isOwner ? 'Owner 可编辑' : '只读'}</span></div>
+            <p class="small muted" style="margin-bottom:14px">BaseVault（IVaultRoles）：transferOwnership / setCurator / setGuardian / setAllocator / setKeeper 均仅 Owner 可调（_onlyOwner）。Curator 的策略配置（addAdapter / setPerformanceFeeBps 等）在 CONFIGURING 阶段由 Owner 直调，此后需经 VaultTimelock 执行。</p>
+            <form id="vault-roles-form" class="grid two" style="gap:14px">
+              <div class="field"><label for="vr-curator">Curator <span class="small muted">setCurator</span></label><input id="vr-curator" class="input mono small" name="curator" placeholder="0x…（留空 = 不设置）" value="${vault.curator || ''}" ${isOwner ? '' : 'disabled'}></div>
+              <div class="field"><label for="vr-guardian">Guardian <span class="small muted">setGuardian</span></label><input id="vr-guardian" class="input mono small" name="guardian" placeholder="0x…（留空 = 不设置）" value="${vault.guardian || ''}" ${isOwner ? '' : 'disabled'}></div>
+              <div class="field"><label for="vr-allocator">Allocator <span class="small muted">setAllocator</span></label><input id="vr-allocator" class="input mono small" name="allocator" placeholder="0x…（留空 = 不设置）" value="${vault.allocator || ''}" ${isOwner ? '' : 'disabled'}></div>
+              <div class="field"><label for="vr-keeper">Keeper <span class="small muted">setKeeper</span></label><input id="vr-keeper" class="input mono small" name="keeper" placeholder="0x…（留空 = 不设置）" value="${vault.keeper || ''}" ${isOwner ? '' : 'disabled'}></div>
+              <div class="field" style="grid-column:1/-1"><label for="vr-new-owner">新 Owner <span class="small muted">transferOwnership</span></label><input id="vr-new-owner" class="input mono small" name="newOwner" placeholder="0x…（留空 = 不变更）" ${isOwner ? '' : 'disabled'}></div>
+              ${isOwner ? '<button class="btn" type="submit" style="justify-self:start">提交角色变更</button>' : '<span class="badge neutral" style="align-self:center">非 Owner：只读视图</span>'}
+            </form>
+          </section>` : `<article class="card card-pad"><div class="section-title"><h3>策略配置说明</h3><span class="badge neutral">VaultTimelock</span></div><p class="small muted">Curator 由 Vault Owner 通过 setCurator 任命后即可在本工作台发起策略与费用配置。变更在 CONFIGURING 之后需经金库专属 VaultTimelock 排队执行，本演示以 Toast 记录代替真实排队。</p></article>`}
+          <article class="card card-pad"><div class="section-title"><h3>最近 Activity</h3><span class="small quiet">仅展示本金库相关记录</span></div>${activityTable(vaultActivities)}</article>
+        </section></div>
+      </main>`;
+    }
+
+    // ---------- 资产角色工作台（对齐金库工作台样式：左侧角色侧栏 + 右侧操作面板） ----------
+    // 默认角色 = 当前钱包在指定资产下已任命角色（逐对象派生），无任命时回退 asset-owner（owner 为注册固有身份）
+    function defaultAssetRole(assetId) {
+      const mine = walletRoleEntries().filter(en => en.kind === 'asset' && (assetId == null || en.id === Number(assetId)));
+      return mine[0]?.roleId || 'asset-owner';
+    }
+
+    function assetRoleSidebar(activeRole, assetId) {
+      const me = myAddr();
+      const appointed = assetAppointedRoles(assetId);
+      return `<aside class="sidebar card"><div class="side-section"><div class="side-label">业务页面</div><button class="side-link" data-route="#/issuance/issue">发行总览</button><button class="side-link" data-route="#/access">My Access</button></div><div class="side-section"><div class="side-label">本资产已任命角色</div>${appointed.length ? appointed.map(r => `<button class="side-link ${r.roleId === activeRole ? 'active' : ''}" data-route="#/assets/workspace/${assetId}/${r.roleId}">${ROLES[r.roleId].label}<small>${ROLES[r.roleId].contract.split('（')[0]} · ${holderName(r.address)}${r.address === me ? ' · ★我持有' : ''}</small></button>`).join('') : '<div class="small muted" style="padding:10px">尚未任命任何角色</div>'}</div></aside>`;
+    }
+
+    // 资产域角色可执行操作（按角色生成，映射 PR#12 合约）
+    function assetRoleActions(roleId, asset) {
+      const isOwner = asset.owner === shortAddress(wallet().address);
+      const actions = [];
+      if (roleId === 'asset-owner') {
+        actions.push({ h: '发起 Mint / Burn 双签', p: 'Issuer（ownerOf 匹配）· initiateMint / initiateBurn，待 Token Agent 第二签名', btn: `<button class="btn small" data-route="#/assets/mintburn/${asset.id}">去双签工作台</button>` });
+        actions.push({ h: '更新元数据哈希', p: 'AssetRegistry.updateMetadataHash · onlyOwner', btn: isOwner ? '<button class="btn small secondary" data-toast="演示：updateMetadataHash 已记录 Activity">演示更新</button>' : '<span class="badge neutral">非 Owner</span>' });
+        actions.push({ h: '任命 Token Agent', p: 'MintBurnController.setTokenAgent · 仅 Owner，指定双签第二签名地址', btn: isOwner ? '<button class="btn small secondary" data-toast="演示：setTokenAgent 已记录 Activity">演示任命</button>' : '<span class="badge neutral">非 Owner</span>' });
+        actions.push({ h: '任命 Proof Publisher', p: 'PoRRegistry.setProofPublisher · 仅 Owner，授权专用发布地址', btn: isOwner ? '<button class="btn small secondary" data-toast="演示：setProofPublisher 已记录 Activity">演示任命</button>' : '<span class="badge neutral">非 Owner</span>' });
+      } else if (roleId === 'token-agent') {
+        actions.push({ h: '批准 Mint', p: 'MintBurnController.approveMint · 第二签名', btn: `<button class="btn small" data-route="#/assets/mintburn/${asset.id}">去双签工作台</button>` });
+        actions.push({ h: '批准 Burn', p: 'MintBurnController.approveBurn · 第二签名', btn: `<button class="btn small secondary" data-route="#/assets/mintburn/${asset.id}">去双签工作台</button>` });
+      } else if (roleId === 'proof-publisher') {
+        actions.push({ h: '发布储备证明', p: 'PoRRegistry.publishReserveProof · 追加式记录', btn: '<button class="btn small" data-route="#/assets/por">去发布</button>' });
+        actions.push({ h: '更新证明引用', p: 'PoRRegistry · 更新文档 URI / 哈希引用', btn: '<button class="btn small secondary" data-toast="演示：证明引用更新已记录 Activity">演示更新</button>' });
+      } else if (roleId === 'wrapper-controller') {
+        actions.push({ h: '部署包装代币', p: 'ReservePSM.deployWrappedToken · 部署者即 Wrapper Controller', btn: '<button class="btn small" data-route="#/assets/wrap">去配置</button>' });
+        actions.push({ h: '暂停 / 恢复包装', p: 'ReservePSM.pauseAsset · 仅 Wrapper Controller', btn: '<button class="btn small secondary" data-toast="演示：pauseAsset 已记录 Activity">演示暂停</button>' });
+        actions.push({ h: '设置授权签名人', p: 'ReservePSM.setAuthorizedSigner · 任命 PSM Authorized Signer', btn: '<button class="btn small secondary" data-toast="演示：setAuthorizedSigner 已记录 Activity">演示任命</button>' });
+      } else if (roleId === 'nav-signer') {
+        actions.push({ h: '创建 / 提交 NAV 更新', p: 'NAVOracle.updateNAV · EIP-712 签名后提交', btn: '<button class="btn small" data-route="#/assets/oracle">去提交</button>' });
+      } else if (roleId === 'adapter-data-provider') {
+        actions.push({ h: '提交外部数据', p: 'CreditAdapter.updateDealData · DATA_PROVIDER_ROLE', btn: '<button class="btn small" data-toast="演示：updateDealData 已记录 Activity">演示提交</button>' });
+        actions.push({ h: '更新数据有效期', p: 'CreditAdapter · 延长 deal 数据有效期', btn: '<button class="btn small secondary" data-toast="演示：数据有效期更新已记录 Activity">演示更新</button>' });
+      } else if (roleId === 'psm-authorized-signer') {
+        actions.push({ h: '签署铸币授权', p: 'ReservePSM.mintWithAuthorization · Document Proof 模式', btn: '<button class="btn small" data-route="#/assets/wrap">去签署</button>' });
+      } else if (roleId === 'relayer') {
+        actions.push({ h: '转发授权消息', p: 'Offchain Relayer · 转发并跟踪交付', btn: '<button class="btn small" data-toast="演示：授权消息已转发">演示转发</button>' });
+        actions.push({ h: '重试失败消息', p: 'Offchain Relayer · 重试未交付消息', btn: '<button class="btn small secondary" data-toast="演示：失败消息重试已记录">演示重试</button>' });
+      }
+      return actions;
+    }
+
+    // 资产角色工作台：任命门控（未完成任命时只显示任命表单）
+    function renderAssetAppointmentGate(asset, roleId, missing) {
+      const ap = getAppointments('assets', asset.id);
+      return `${publicHeader('issuance', 'workspace')}<main class="page">
+        <div class="workspace-shell">${assetRoleSidebar(roleId, asset.id)}<section class="workspace-main stack">
+          <div class="page-head"><div><div class="eyebrow">${asset.symbol} · 角色任命</div><h1>${escapeHtml(asset.name)} <span class="mono quiet" style="font-size:18px">${asset.symbol}</span></h1><p>新注册资产必须先完成全部角色任命，才能开放 Mint/Burn、储备证明、包装等任何操作。</p></div><div class="row"><span class="badge warning">任命未完成</span></div></div>
+          <div class="op-alert" style="margin-bottom:16px">⚠ 还有 ${missing.length} 个角色未任命。在全部任命完成前，本资产不显示任何其他操作按钮。</div>
+          <section class="card card-pad"><div class="section-title"><h3>第一步 · 任命资产角色</h3><span class="badge warning">必完成 ${ASSET_REQUIRED_ROLES.length} 项</span></div>
+            <p class="small muted" style="margin-bottom:14px">Asset Owner 通过以下 setX 函数任命各角色；全部任命完成后工作台才会开放对应操作。</p>
+            <form id="asset-appoint-form" class="grid two" style="gap:14px">
+              ${ASSET_REQUIRED_ROLES.map(r => `<div class="field"><label for="ap-${r.key}">${r.label} * <span class="small muted">${r.fn}</span></label><input id="ap-${r.key}" class="input mono small" name="${r.key}" placeholder="0x… 任命地址" value="${ap[r.key] || ''}" required><p class="small quiet" style="margin-top:4px">${r.hint}</p></div>`).join('')}
+              <button class="btn" type="submit" style="grid-column:1/-1;justify-self:start">确认任命</button>
+            </form>
+          </section>
+        </section></div>
+      </main>`;
+    }
+
+    // 金库角色工作台：任命门控（未完成任命时只显示任命表单）
+    function renderVaultAppointmentGate(vault, roleId, missing) {
+      const ap = getAppointments('vaults', vault.id);
+      return `${publicHeader('vaults')}<main class="page">
+        <div class="workspace-shell">${roleSidebar(roleId, vault.id)}<section class="workspace-main stack">
+          <div class="page-head"><div><div class="eyebrow">${vault.symbol} · 角色任命</div><h1>${escapeHtml(vault.name)} <span class="mono quiet" style="font-size:18px">${vault.symbol}</span></h1><p>新部署金库必须先完成全部角色任命，才能开放策略配置、结算、分配等任何操作。</p></div><div class="row"><span class="badge warning">任命未完成</span></div></div>
+          <div class="op-alert" style="margin-bottom:16px">⚠ 还有 ${missing.length} 个角色未任命。在全部任命完成前，本金库不显示任何其他操作按钮。</div>
+          <section class="card card-pad"><div class="section-title"><h3>第一步 · 任命金库角色</h3><span class="badge warning">必完成 ${VAULT_REQUIRED_ROLES.length} 项</span></div>
+            <p class="small muted" style="margin-bottom:14px">Vault Owner 通过 IVaultRoles 的 setX 函数任命各角色（仅 Owner 可调）；全部任命完成后工作台才会开放对应操作。</p>
+            <form id="vault-appoint-form" class="grid two" style="gap:14px">
+              ${VAULT_REQUIRED_ROLES.map(r => `<div class="field"><label for="vp-${r.key}">${r.label} * <span class="small muted">${r.fn}</span></label><input id="vp-${r.key}" class="input mono small" name="${r.key}" placeholder="0x… 任命地址" value="${ap[r.key] || ''}" required><p class="small quiet" style="margin-top:4px">${r.hint}</p></div>`).join('')}
+              <button class="btn" type="submit" style="grid-column:1/-1;justify-self:start">确认任命</button>
+            </form>
+          </section>
+        </section></div>
+      </main>`;
+    }
+
+    // 资产角色工作台：左侧 assetRoleSidebar + 右侧（capability / stat 卡 / 可执行操作 / 角色表单 / 最近 Activity）
+    function assetRoleWorkspace(roleId, assetId) {
+      const asset = assetById(assetId) || ASSETS[0];
+      const role = ROLES[roleId] || ROLES['asset-owner'];
+      const missing = missingRoles('assets', asset.id, ASSET_REQUIRED_ROLES);
+      if (missing.length) return renderAssetAppointmentGate(asset, roleId, missing);
+      const isOwner = asset.owner === shortAddress(wallet().address);
+      const navRec = state.navRecords[asset.id];
+      const actions = assetRoleActions(roleId, asset);
+      const assetActivities = state.activities.filter(a => (a.text || '').includes(asset.symbol) || (a.text || '').includes(asset.name)).slice(0, 5);
+      const todoCount = Math.min(actions.length, 5);
+      return `${publicHeader('issuance', 'workspace')}<main class="page">
+        <div class="workspace-shell">${assetRoleSidebar(roleId, asset.id)}<section class="workspace-main stack">
+          <div class="page-head"><div><div class="eyebrow">${asset.symbol} · ${role.label} workspace</div><h1>${escapeHtml(asset.name)} <span class="mono quiet" style="font-size:18px">${asset.symbol}</span></h1><p>${role.summary}</p></div><div class="row"><button class="btn secondary" data-route="#/issuance/issue">返回发行</button></div></div>
+          <div class="capability card"><div class="row between wrap"><div><strong>权限来源</strong><div class="small muted" style="margin-top:4px">${networkLabel()} · ${shortAddress(wallet().address)} · <span class="mono">${asset.token}</span></div></div><div class="row wrap">${statusBadge(asset.active ? 'active' : 'paused')}<span class="role-chip">${asset.type || 'Token Custody'}</span>${isOwner ? '<span class="badge success">Owner</span>' : ''}</div></div></div>
+          <div class="grid four">
+            <div class="stat card"><div class="stat-label"><span class="dot warning"></span>待办任务</div><div class="stat-value">${todoCount}</div><div class="stat-foot">按紧急度排序</div></div>
+            <div class="stat card"><div class="stat-label"><span class="dot"></span>可执行操作</div><div class="stat-value">${actions.length}</div><div class="stat-foot">当前角色</div></div>
+            <div class="stat card"><div class="stat-label"><span class="dot success"></span>今日交易</div><div class="stat-value">${assetActivities.length}</div><div class="stat-foot">本资产 Activity</div></div>
+            <div class="stat card"><div class="stat-label"><span class="dot"></span>最新 NAV</div><div class="stat-value" style="font-size:20px">${navRec ? navRec.nav : asset.nav}</div><div class="stat-foot">${navRec ? '来自 NAVOracle' : '演示默认值'}</div></div>
+          </div>
+          <article class="card card-pad"><div class="section-title"><h3>可执行操作</h3><span class="call-tag">${role.contract}</span></div><div class="action-list">${actions.length ? actions.map(a => `<div class="action-row"><div><h4>${a.h}</h4><p>${a.p}</p></div>${a.btn}</div>`).join('') : '<div class="empty"><h3>当前角色无操作</h3><p>切换左侧角色查看对应操作面板。</p></div>'}</div></article>
+          ${roleId === 'asset-owner' ? `<section class="card card-pad" id="asset-roles"><div class="section-title"><h3>AssetRegistry · 资产角色管理</h3><span class="badge neutral">${isOwner ? 'Owner 可编辑' : '只读'}</span></div>
+            <p class="small muted" style="margin-bottom:14px">AssetRegistry / MintBurnController / PoRRegistry：setTokenAgent / setProofPublisher / updateMetadataHash / transferAssetOwnership 均仅 Owner 可调。Mint 双签由 Issuer 发起、Token Agent 批准。</p>
+            <form id="asset-roles-form" class="grid two" style="gap:14px">
+              <div class="field"><label for="ar-token-agent">Token Agent <span class="small muted">setTokenAgent</span></label><input id="ar-token-agent" class="input mono small" name="tokenAgent" placeholder="0x…（留空 = 不设置）" ${isOwner ? '' : 'disabled'}></div>
+              <div class="field"><label for="ar-proof-publisher">Proof Publisher <span class="small muted">setProofPublisher</span></label><input id="ar-proof-publisher" class="input mono small" name="proofPublisher" placeholder="0x…（留空 = 不设置）" ${isOwner ? '' : 'disabled'}></div>
+              <div class="field"><label for="ar-metadata">新 metadataHash <span class="small muted">updateMetadataHash</span></label><input id="ar-metadata" class="input mono small" name="metadataHash" placeholder="0x…（留空 = 不变更）" ${isOwner ? '' : 'disabled'}></div>
+              <div class="field"><label for="ar-new-owner">新 Owner <span class="small muted">transferAssetOwnership</span></label><input id="ar-new-owner" class="input mono small" name="newOwner" placeholder="0x…（留空 = 不变更）" ${isOwner ? '' : 'disabled'}></div>
+              ${isOwner ? '<button class="btn" type="submit" style="justify-self:start">提交角色变更</button>' : '<span class="badge neutral" style="align-self:center">非 Owner：只读视图</span>'}
+            </form>
+          </section>` : ''}
+          <article class="card card-pad"><div class="section-title"><h3>最近 Activity</h3><span class="small quiet">仅展示本资产相关记录</span></div>${activityTable(assetActivities)}</article>
+        </section></div>
+      </main>`;
+    }
+
+    // ---------- 资产管理中心（业务总览：4 小模块 + 管理金库表格；角色入口在金库详情） ----------
+    function renderVaultsHub() {
+      if (!wallet()) return renderConnectPanel('资产管理中心');
+      const vaultRoles = walletRoleEntries().filter(en => en.kind === 'vault').length;
+      const myVaults = VAULTS.filter(v => v.owner === shortAddress(wallet().address));
+      const pendingCount = VAULTS.filter(v => v.status === 'submitted' || v.status === 'pending').length;
+      return `${publicHeader('vaults')}<main class="page">
+        <div class="page-head"><div><div class="eyebrow">Vault hub</div><h1>资产管理中心</h1><p>创建金库是开放的：任何账户调用 VaultFactory.deployVault 即可部署，创建者自动成为该金库 Owner。但 StateManager 只接受官方 Factory 的注册——官方 Factory 由 Governor 调用 StateManager.setVaultFactory 指定。进入金库后才会展示当前账户在该金库下被任命的角色，可按角色进入对应工作台。</p></div><div class="row"><button class="btn" data-route="#/vaults/create">创建金库</button></div></div>
+        ${contextBar()}
+        <div class="grid four">
+          <div class="stat card"><div class="stat-label"><span class="dot"></span>我的角色</div><div class="stat-value">${vaultRoles}</div><div class="stat-foot">按对象任命派生</div></div>
+          <div class="stat card"><div class="stat-label"><span class="dot success"></span>可访问对象</div><div class="stat-value">${myVaults.length}</div><div class="stat-foot">Owner 名下金库</div></div>
+          <div class="stat card"><div class="stat-label"><span class="dot warning"></span>待处理</div><div class="stat-value">${pendingCount}</div><div class="stat-foot">上架审核队列</div></div>
+          <div class="stat card"><div class="stat-label"><span class="dot"></span>最近操作</div><div class="stat-value">${state.activities.length}</div><div class="stat-foot">Activity</div></div>
+        </div>
+        <section class="section">
+          <div class="section-title"><div><div class="eyebrow">My vaults</div><h2>管理金库</h2></div><span class="badge neutral">点击「详情 →」进入角色工作台</span></div>
+          <section class="card"><div class="table-wrap"><table><thead><tr><th>金库</th><th>合约地址</th><th>类型</th><th>NAV</th><th>状态</th><th>操作</th></tr></thead><tbody>${myVaults.length ? myVaults.map(v => `<tr><td><strong>${escapeHtml(v.name)}</strong><div class="small quiet mono">${v.symbol} · ${v.id}</div></td><td class="mono small">${v.address}</td><td><span class="role-chip">${v.type}</span></td><td class="mono">${v.nav}</td><td>${statusBadge(v.status === 'listed' ? 'listed' : v.status === 'submitted' ? 'submitted' : 'pending')}</td><td><button class="table-link" data-route="#/vaults/manage/${v.id}">详情 →</button></td></tr>`).join('') : `<tr><td colspan="6" class="empty"><h3>还没有金库</h3><p>创建是开放的，任何人都可以通过官方 Factory 部署 Vault；创建后即可在下方管理。</p><button class="btn" data-route="#/vaults/create">去创建</button></td></tr>`}</tbody></table></div></section>
+        </section>
+      </main>`;
+    }
+
+    // ---------- 创建金库（deployVault 开放部署） ----------
+    function renderCreateVault() {
+      if (!wallet()) return renderConnectPanel('创建金库');
+      const steps = [{ t: '填写 VaultParams', d: '14 字段：adapterRegistry 必填、owner 可选（0 => 调用者）' }, { t: '调用 deployVault', d: '无许可：任何用户可调用；Factory 部署 Vault + Timelock' }, { t: 'Factory 注册', d: 'Factory 调 StateManager.registerVault，校验 msg.sender == vaultFactory 地址匹配；Factory 无需 GOVERNOR_ROLE' }, { t: '创建者成为 Owner', d: 'VaultDeployed 事件落账，Owner 可管理角色与上架' }];
+      return `${publicHeader('vaults')}<main class="page">
+        <div class="page-head"><div><div class="eyebrow">Deploy vault</div><h1>创建金库</h1><p>调用 VaultFactory.deployVault(VaultParams)，开放部署、无角色要求。StateManager 通过「地址匹配」（msg.sender == vaultFactory）而非角色判断来放行注册。任何人也可部署自己的 VaultFactory 合约，但只有 Governor 通过 StateManager.setVaultFactory 指定的官方 Factory 才能成功注册 Vault。</p></div><div class="row"><button class="btn secondary" data-route="#/vaults">返回资产管理中心</button></div></div>
+        ${contextBar()}
+        <div class="work-layout">
+          <div class="stack">
+            <section class="card card-pad">
+              <div class="section-title"><h3>金库参数 VaultParams</h3>${callTag('VaultFactory.deployVault(VaultParams)')}</div>
+              <div class="flowbar" style="margin-bottom:18px">${flowBar(steps, 0)}</div>
+              <form id="create-vault-form" class="form-grid">
+                <div class="field"><label for="cv-type">金库类型 *</label><select id="cv-type" class="select" name="vaultType"><option value="Earn">Earn（单资产）</option><option value="Liquidity">Liquidity（LP）</option></select></div>
+                <div class="field"><label for="cv-name">名称 *</label><input id="cv-name" class="input" name="name" placeholder="如：T-Bill Income Vault" required></div>
+                <div class="field"><label for="cv-symbol">份额符号 *</label><input id="cv-symbol" class="input" name="symbol" placeholder="如：htTBILL" required></div>
+                <div class="field"><label for="cv-usdt">USDT 合约</label><input id="cv-usdt" class="input mono small" name="usdt" value="${DEPLOY.mockUSDT}" required></div>
+                <div class="field"><label>StateManager</label><input class="input mono small" value="${DEPLOY.stateManager}" readonly></div>
+                <div class="field"><label>Queue</label><input class="input mono small" value="${DEPLOY.queue}" readonly></div>
+                <div class="field"><label for="cv-adapter">AdapterRegistry *</label><input id="cv-adapter" class="input mono small" name="adapterRegistry" value="${DEPLOY.adapterRegistry}" required><p class="small quiet" style="margin-top:4px">必填：为 0 时合约直接 ZeroAddress 拒绝；正式版从 SDK HyperTesseraAddresses 读取</p></div>
+                <div class="field"><label for="cv-owner">Owner（留空 = 调用者）</label><input id="cv-owner" class="input mono small" name="owner" placeholder="0x...（params.owner == 0 时取 msg.sender）"></div>
+                <div class="field"><label>LiquidityBridge</label><input class="input mono small" value="${DEPLOY.liquidityBridge}" readonly></div>
+                <div class="field"><label for="cv-cash">CashVault（LP 必填）</label><input id="cv-cash" class="input mono small" name="cashVault" value="${DEPLOY.cashVault}"></div>
+                <div class="field"><label for="cv-product">初始产品状态 ProductState *</label><select id="cv-product" class="select" name="initialProduct"><option value="CONFIGURING" selected>CONFIGURING（初始配置）</option><option value="SUBSCRIBING">SUBSCRIBING（募集中）</option><option value="FUNDING_FAILED">FUNDING_FAILED（募资失败）</option><option value="OPERATING">OPERATING（运行中）</option><option value="SETTLING">SETTLING（最终结算）</option><option value="MATURING">MATURING（链下偿还中）</option><option value="CLAIMING">CLAIMING（可赎回）</option><option value="CLOSED">CLOSED（终态）</option></select></div>
+                <div class="field"><label for="cv-cycle">初始周期状态 CycleState *</label><select id="cv-cycle" class="select" name="initialCycle"><option value="ACCEPTING" selected>ACCEPTING（接受存入/赎回请求）</option><option value="CALCULATING">CALCULATING（结算计算中）</option><option value="FULFILLING">FULFILLING（批次执行中）</option><option value="COMPLETED">COMPLETED（周期完成）</option></select></div>
+                <div class="field full"><button class="btn" type="submit">部署金库</button><p class="small quiet" style="margin-top:8px">创建者（或填写的 owner）自动成为该金库 Owner；随后可发起网站上架申请进入 Ops 审核。</p></div>
+              </form>
+            </section>
+          </div>
+          ${sidePanel({ contract: 'VaultFactory.deployVault + StateManager.registerVault', permission: '无许可（开放部署）', permissionNote: 'registerVault 校验 msg.sender == vaultFactory 地址；官方 Factory 由 Governor 通过 setVaultFactory 指定；Factory 无需 GOVERNOR_ROLE，注册权限来自 StateManager 中保存的地址匹配；adapterRegistry 为必填参数（0 地址拒绝）', pre: 'StateManager 已指向官方 Factory', events: 'VaultDeployed(vaultType, vault, owner, timelock, name, symbol, timestamp)', next: '自动进入金库详情（创建者 = Owner）', note: '新金库默认为未上架状态，需在 Ops 审核后台通过后才出现在 Products。' })}
+        </div>
+      </main>`;
+    }
+
+    // ---------- 管理金库 ----------
+    function renderVaultList() {
+      if (!wallet()) return renderConnectPanel('管理金库');
+      const myVaults = VAULTS.filter(v => v.owner === shortAddress(wallet().address));
+      return `${publicHeader('vaults')}<main class="page">
+        <div class="page-head"><div><div class="eyebrow">Vault owner</div><h1>管理金库</h1><p>仅展示 owner 匹配当前钱包的金库。金库详情可发起网站上架申请（进入 Ops 审核）与更新 NAV。</p></div><div class="row"><button class="btn secondary" data-route="#/vaults">返回资产管理中心</button></div></div>
+        ${contextBar(`<div class="context-item"><span>Scope</span><strong>Vault Owner 名下金库</strong></div>`)}
+        <section class="card"><div class="table-wrap"><table><thead><tr><th>金库</th><th>合约地址</th><th>类型</th><th>NAV</th><th>状态</th><th>操作</th></tr></thead><tbody>${myVaults.length ? myVaults.map(v => `<tr><td><strong>${escapeHtml(v.name)}</strong><div class="small quiet mono">${v.symbol} · ${v.id}</div></td><td class="mono small">${v.address}</td><td><span class="role-chip">${v.type}</span></td><td class="mono">${v.nav}</td><td>${statusBadge(v.status === 'listed' ? 'listed' : v.status === 'submitted' ? 'submitted' : 'pending')}</td><td><button class="table-link" data-route="#/vaults/manage/${v.id}">详情 →</button></td></tr>`).join('') : `<tr><td colspan="6" class="empty"><h3>无金库</h3><p>创建是开放的。</p><button class="btn" data-route="#/vaults/create">去创建</button></td></tr>`}</tbody></table></div></section>
+      </main>`;
+    }
+
+    // ---------- 金库详情（进入金库后：Vault Owner 角色工作台，双栏布局） ----------
+    function renderVaultDetail(id) {
+      const vault = vaultById(id);
+      if (!vault) return renderNotFound('金库不存在');
+      if (!wallet()) return renderConnectPanel('金库详情');
+      return vaultRoleWorkspace('vault-owner', id);
+    }
+
+    // =====================================================================
+    //  内部运营（Ops）：独立账号体系，不连接钱包
+    // =====================================================================
+
+    // ---------- 审核后台登录 ----------
+    function renderOpsLogin() {
+      return `${publicHeader('')}<main class="page"><div class="page-head"><div><div class="eyebrow">Internal ops</div><h1>Vault 上架审核后台</h1><p>独立账号密码体系（不与钱包绑定）。演示账号：reviewer@hypertessera.demo / Demo2026!。审核只影响网站展示，不触碰链上状态。</p></div></div>
+        <div class="connect-panel card">
+          <div class="connect-copy"><div class="eyebrow">Ops console</div><h2>登录后进入审核队列</h2><p>审核内容：产品名称、策略描述、披露信息与风险提示的完整性。</p></div>
+          <form id="ops-login-form" class="card-pad" style="display:grid;gap:16px;align-content:start">
+            <div class="field"><label>邮箱</label><input class="input" name="email" type="email" placeholder="reviewer@hypertessera.demo" required></div>
+            <div class="field"><label>密码</label><input class="input" name="password" type="password" placeholder="Demo2026!" required></div>
+            <button class="btn" type="submit">登录审核后台</button>
+          </form>
+        </div>
+      </main>`;
+    }
+
+    // ---------- 审核 Dashboard ----------
+    function renderOpsDashboard() {
+      if (!state.opsSession.authenticated) return renderOpsLogin();
+      const queue = VAULTS.filter(v => v.status === 'submitted');
+      const listed = VAULTS.filter(v => v.status === 'listed');
+      return `${publicHeader('')}<main class="page">
+        <div class="page-head"><div><div class="eyebrow">Ops dashboard</div><h1>上架审核 Dashboard</h1><p>审核对象是网站展示资料，不改变链上状态。登录身份：${escapeHtml(state.opsSession.reviewer)}。</p></div><div class="row"><button class="btn secondary" data-ops-logout>退出登录</button></div></div>
+        <div class="grid four"><div class="stat card"><div class="stat-label">待审核</div><div class="stat-value">${queue.length}</div><div class="stat-foot">审核队列</div></div><div class="stat card"><div class="stat-label">已上架</div><div class="stat-value">${listed.length}</div><div class="stat-foot">公开可见</div></div><div class="stat card"><div class="stat-label">已驳回</div><div class="stat-value">0</div><div class="stat-foot">历史</div></div><div class="stat card"><div class="stat-label">审核操作</div><div class="stat-value">${state.activities.filter(a => a.ops).length}</div><div class="stat-foot">本次会话</div></div></div>
+        <section class="section card card-pad"><div class="section-title"><h3>审核队列</h3><span class="badge warning">${queue.length} 待处理</span></div><div class="req-list">${queue.length ? queue.map(v => `<div class="req-item"><div class="req-main"><h4>${escapeHtml(v.name)} <span class="mono quiet">${v.symbol}</span></h4><p class="small muted">${v.type} · ${v.address}<br>提交人 ${v.owner} · 待审核披露资料：产品名称 / 策略描述 / 风险提示</p></div><div class="row wrap"><button class="btn success small" data-ops-approve="${v.id}">通过上架</button><button class="btn danger small" data-ops-reject="${v.id}">驳回</button></div></div>`).join('') : '<div class="empty" style="padding:22px"><h3 style="font-size:15px">队列为空</h3><p>所有上架申请都已处理。</p></div>'}</div></section>
+        <section class="section grid two">
+          <article class="card card-pad"><div class="section-title"><h3>已上架 Vault</h3><span class="badge success">${listed.length}</span></div><div class="stack">${listed.length ? listed.map(v => `<div class="req-item"><div class="req-main"><h4>${escapeHtml(v.name)}</h4><p class="small muted mono">${v.address}</p></div>${statusBadge('listed')}</div>`).join('') : '<div class="empty"><h3>暂无上架</h3></div>'}</div></article>
+          <article class="card card-pad"><div class="section-title"><h3>审核规则</h3></div><div class="edge-list"><div class="edge-row"><div class="edge-from">资料完整</div><div class="edge-via">→ 必须</div><div class="edge-to">披露与风险提示</div></div><div class="edge-row"><div class="edge-from">链上状态</div><div class="edge-via">→ 不修改</div><div class="edge-to">仅网站展示</div></div><div class="edge-row"><div class="edge-from">驳回</div><div class="edge-via">→ 通知</div><div class="edge-to">Owner 修改后重提</div></div></div></article>
+        </section>
+      </main>`;
+    }
+
+    // ---------- 404 ----------
+    function renderNotFound(message = '页面不存在') {
+      return `${publicHeader('')}<main class="page"><div class="empty card"><div class="eyebrow">404</div><h1>${escapeHtml(message)}</h1><p>路由未匹配，返回首页重新开始。</p><button class="btn" data-route="#/">返回首页</button></div></main>`;
+    }
+
+    // =====================================================================
+    //  路由分发 / 钱包弹窗 / 提交函数 / 事件绑定
+    // =====================================================================
+
+    function renderApp() {
+      const path = currentPath();
+      const root = document.getElementById('root');
+      const mManage = path.match(/^#\/assets\/manage\/(\d+)$/);
+      const mAssetWs = path.match(/^#\/assets\/workspace\/(\d+)(?:\/([^/]+))?$/);
+      const mMint = path.match(/^#\/assets\/mintburn\/(\d+)$/);
+      const mVault = path.match(/^#\/vaults\/manage\/([^/]+)$/);
+      const mWs = path.match(/^#\/workspace\/([^/]+)\/([^/]+)$/);
+      let html;
+      if (path === '#/' || path === '') html = renderHome();
+      else if (path === '#/blueprint') html = renderBlueprint();
+      else if (path === '#/products') html = renderProducts();
+      else if (path === '#/access') html = renderAccess();
+      else if (path === '#/issuance' || path === '#/issuance/issue') html = renderIssueCenter();
+      else if (path === '#/assets/register') html = renderRegister();
+      else if (path === '#/assets/manage') html = renderManageAssets();
+      else if (mManage) html = renderAssetDetail(mManage[1]);
+      else if (mAssetWs) html = assetRoleWorkspace(mAssetWs[2] || defaultAssetRole(mAssetWs[1]), mAssetWs[1]);
+      else if (mMint) html = renderMintBurn(mMint[1]);
+      else if (path === '#/assets/oracle') html = renderOracle();
+      else if (path === '#/assets/por') html = renderPor();
+      else if (path === '#/assets/wrap') html = renderWrap();
+      else if (path === '#/assets/wrapped') html = renderWrapped();
+      else if (path === '#/vaults') html = renderVaultsHub();
+      else if (path === '#/vaults/create') html = renderCreateVault();
+      else if (path === '#/vaults/manage') html = renderVaultList();
+      else if (mVault) html = renderVaultDetail(mVault[1]);
+      else if (path === '#/ops/login') html = renderOpsLogin();
+      else if (path === '#/ops/dashboard') html = renderOpsDashboard();
+      else if (mWs) html = renderWorkspace(mWs[1], mWs[2]);
+      else html = renderNotFound();
+      root.innerHTML = html;
+      window.scrollTo({ top: 0 });
+    }
+
+    // ---------- 钱包选择弹窗 ----------
+    function openWalletModal() {
+      const current = wallet();
+      const roles = walletRoleEntries();
+      showModal(`<div class="modal-head"><div><h3>选择演示账户</h3><p class="small muted">按「网络 + 钱包」查询角色；当前网络 ${networkLabel()}</p></div><button class="close-button" data-close-modal="true">×</button></div>
+        <div class="field" style="margin-bottom:14px"><label>网络</label><select class="select" data-modal-network>${NETWORKS.map(n => `<option value="${n.id}" ${n.id === state.walletSession.network ? 'selected' : ''}>${n.label}</option>`).join('')}</select></div>
+        <div class="account-list">${Object.entries(WALLETS).map(([id, account]) => `<button class="account-option" data-connect-wallet="${id}"><div><strong>${escapeHtml(account.name)}</strong><span class="mono">${escapeHtml(shortAddress(account.address))}</span></div><span class="badge neutral">${walletRoleEntries(id).length} 个角色</span></button>`).join('')}</div>
+        ${current ? `<div class="row between wrap" style="margin-top:14px"><span class="small muted">当前：${escapeHtml(current.name)} · ${roles.map(en => roleChip(en.roleId)).join('') || '无角色'}</span><button class="btn danger small" data-reset>重置演示数据</button></div>` : ''}`);
+    }
+
+    // ---------- 提交函数（演示版：角色判定代替链上签名） ----------
+    function submitRegister(e) {
+      if (!wallet()) return toast('请先连接钱包');
+      const f = e.target;
+      const hash = f.metadataHash.value.trim();
+      if (!/^0x[0-9a-fA-F]{64}$/.test(hash)) return toast('metadataHash 必须是 0x + 64 位十六进制（keccak256 输出），请选择文档自动生成或手动填写');
+      const id = ASSETS.length + 1;
+      ASSETS.push({
+        id, name: f.name.value.trim(), symbol: f.symbol.value.trim().toUpperCase(), decimals: Number(f.decimals.value || 18),
+        owner: shortAddress(wallet().address), token: '0x' + String(id).padStart(4, '0') + '...A' + String(id).padStart(4, '0'),
+        active: true, metadataHash: hash, network: state.walletSession.network, nav: '1.0000'
+      });
+      state.issuanceWorkspaceAssets.push({ id, type: 'Token Custody', status: 'active' });
+      state.activities.unshift({ text: `注册资产 ${ASSETS[ASSETS.length - 1].symbol}（registerAsset）`, at: Date.now() });
+      saveState();
+      toast(`AssetRegistered：${ASSETS[ASSETS.length - 1].name} 已上链，你已成为 Asset Owner`);
+      state.activeIssuanceTab = 'workspace';
+      saveState();
+      navigate(`#/assets/manage/${id}`);
+    }
+
+    function submitVaultRoles(e) {
+      if (!wallet()) return toast('请先连接钱包');
+      // 金库角色表单同时出现在金库详情（#/vaults/manage/:id）与角色工作台（#/workspace/:role/:id）
+      const m = currentPath().match(/^#\/(?:vaults\/manage|workspace\/[^/]+)\/([^/]+)$/);
+      if (!m) return toast('未找到金库上下文');
+      const vault = vaultById(m[1]);
+      if (!vault) return toast('金库不存在');
+      if (vault.owner !== shortAddress(wallet().address)) return toast('IVaultRoles 仅 Owner 可调（_onlyOwner），当前账户无权');
+      const f = e.target;
+      const changes = [];
+      const applyRole = (key, fnName) => {
+        const v = (f[key]?.value || '').trim();
+        if (v && v !== (vault[key] || '')) { vault[key] = shortAddress(v); changes.push(`${fnName} → ${shortAddress(v)}`); }
+        else if (!v && vault[key]) { delete vault[key]; changes.push(`${fnName} → 未设置`); }
+      };
+      applyRole('curator', 'setCurator');
+      applyRole('guardian', 'setGuardian');
+      applyRole('allocator', 'setAllocator');
+      applyRole('keeper', 'setKeeper');
+      const newOwner = (f.newOwner?.value || '').trim();
+      if (newOwner && newOwner !== vault.owner) { vault.owner = shortAddress(newOwner); changes.push(`transferOwnership → ${shortAddress(newOwner)}`); }
+      if (!changes.length) return toast('未检测到角色变更');
+      state.activities.unshift({ text: `金库 ${vault.symbol} 角色变更：${changes.join('；')}`, at: Date.now() });
+      saveState();
+      toast(`IVaultRoles：${changes.join('；')}`);
+      renderApp();
+    }
+
+    // 资产角色任命门控提交：保存任命，全部完成后才开放操作
+    function submitAssetAppointments(e) {
+      if (!wallet()) return toast('请先连接钱包');
+      const m = currentPath().match(/^#\/assets\/(?:workspace|manage)\/(\d+)/);
+      if (!m) return toast('未找到资产上下文');
+      const id = Number(m[1]);
+      const f = e.target;
+      state.appointments.assets = state.appointments.assets || {};
+      state.appointments.assets[id] = state.appointments.assets[id] || {};
+      ASSET_REQUIRED_ROLES.forEach(r => { const v = (f[r.key]?.value || '').trim(); if (v) state.appointments.assets[id][r.key] = shortAddress(v); });
+      const still = missingRoles('assets', id, ASSET_REQUIRED_ROLES);
+      state.activities.unshift({ text: `资产 #${id} 角色任命：${ASSET_REQUIRED_ROLES.map(r => `${r.fn} → ${state.appointments.assets[id][r.key] || '未设置'}`).join('；')}`, at: Date.now() });
+      saveState();
+      toast(still.length ? `还差 ${still.length} 个角色未任命，其他操作暂不开放` : '角色任命完成，已开放全部操作');
+      renderApp();
+    }
+
+    // 金库角色任命门控提交：保存任命，全部完成后才开放操作
+    function submitVaultAppointments(e) {
+      if (!wallet()) return toast('请先连接钱包');
+      const m = currentPath().match(/^#\/(?:vaults\/manage|workspace\/[^/]+)\/([^/]+)$/);
+      if (!m) return toast('未找到金库上下文');
+      const vault = vaultById(m[1]);
+      if (!vault) return toast('金库不存在');
+      if (vault.owner !== shortAddress(wallet().address)) return toast('IVaultRoles 仅 Owner 可调（_onlyOwner），当前账户无权');
+      const f = e.target;
+      state.appointments.vaults = state.appointments.vaults || {};
+      state.appointments.vaults[vault.id] = state.appointments.vaults[vault.id] || {};
+      VAULT_REQUIRED_ROLES.forEach(r => { const v = (f[r.key]?.value || '').trim(); if (v) state.appointments.vaults[vault.id][r.key] = shortAddress(v); });
+      const still = missingRoles('vaults', vault.id, VAULT_REQUIRED_ROLES);
+      state.activities.unshift({ text: `金库 ${vault.symbol} 角色任命：${VAULT_REQUIRED_ROLES.map(r => `${r.fn} → ${state.appointments.vaults[vault.id][r.key] || '未设置'}`).join('；')}`, at: Date.now() });
+      saveState();
+      toast(still.length ? `还差 ${still.length} 个角色未任命，其他操作暂不开放` : '角色任命完成，已开放全部操作');
+      renderApp();
+    }
+
+    // ---------- Settlement Operator 交互（eth_sign 签名 / submitBatch / confirmFinalSettlement） ----------
+    function signSettlementInstruction(vaultId) {
+      if (!wallet()) return toast('请先连接钱包');
+      const me = myAddr();
+      const ops = getSettlementOps(vaultId);
+      if (!ops.operators.includes(me)) return toast('你不是本金库的 Settlement Operator（需 Owner 通过 setOperator 任命）');
+      state.settlementOps[vaultId] = state.settlementOps[vaultId] || { threshold: 1, operators: [], signatures: {}, history: [] };
+      const hash = settleInstructionHash(vaultId);
+      state.settlementOps[vaultId].signatures[hash] = state.settlementOps[vaultId].signatures[hash] || [];
+      if (state.settlementOps[vaultId].signatures[hash].includes(me)) return toast('你已对当前指令签名（eth_sign），无需重复');
+      state.settlementOps[vaultId].signatures[hash].push(me);
+      state.activities.unshift({ text: `Settlement ${vaultId}：operator ${holderName(me)} 已对指令 ${hash.slice(0, 10)}… 做 eth_sign 签名`, at: Date.now() });
+      saveState(); toast(`eth_sign 签名已记录（${state.settlementOps[vaultId].signatures[hash].length}/${state.settlementOps[vaultId].threshold}）`); renderApp();
+    }
+    function submitSettlementBatch(vaultId) {
+      if (!wallet()) return toast('请先连接钱包');
+      const ops = getSettlementOps(vaultId);
+      const hash = settleInstructionHash(vaultId);
+      const sigs = (state.settlementOps[vaultId] && state.settlementOps[vaultId].signatures[hash]) || [];
+      if (!ops.threshold || sigs.length < ops.threshold) return toast(`签名不足：需 ${ops.threshold} 个，当前 ${sigs.length} 个，无法提交 submitBatch`);
+      const d = settlementDemoData(vaultId);
+      state.settlementOps[vaultId].signatures[hash] = [];
+      state.settlementOps[vaultId].history.unshift({ hash, cycle: d.cycle, net: d.net, at: Date.now(), signers: sigs.length, threshold: ops.threshold });
+      state.activities.unshift({ text: `Settlement ${vaultId}：submitBatch 成功（cycle #${d.cycle}，轧差净额 ${Number(d.net).toLocaleString()}，${sigs.length}/${ops.threshold} 签）`, at: Date.now() });
+      saveState(); toast('submitBatch 已上链：结算批次执行成功（签名数达标、状态正确、资金守恒）'); renderApp();
+    }
+    function confirmFinalSettlement(vaultId) {
+      if (!wallet()) return toast('请先连接钱包');
+      const ops = getSettlementOps(vaultId);
+      if (!ops.operators.includes(myAddr())) return toast('confirmFinalSettlement 需 operator 签名（KeeperBot 无 operator 私钥，不可执行）');
+      state.activities.unshift({ text: `Settlement ${vaultId}：confirmFinalSettlement 最终结算已确认`, at: Date.now() });
+      saveState(); toast('confirmFinalSettlement：产品最终结算已确认'); renderApp();
+    }
+    function submitSettleOps(e) {
+      if (!wallet()) return toast('请先连接钱包');
+      const f = e.target;
+      const vaultId = f.vaultId.value;
+      const vault = vaultById(vaultId);
+      if (!vault) return toast('金库不存在');
+      if (vault.owner !== myAddr()) return toast('仅 Vault Owner 可调 setOperator / setThreshold');
+      state.settlementOps[vaultId] = state.settlementOps[vaultId] || { threshold: 1, operators: [], signatures: {}, history: [] };
+      const ops = state.settlementOps[vaultId];
+      const addr = (f.opAddr.value || '').trim();
+      if (addr) { const s = shortAddress(addr); if (!ops.operators.includes(s)) { ops.operators.push(s); } }
+      const th = Math.max(1, Number(f.threshold.value) || 1);
+      ops.threshold = th;
+      state.activities.unshift({ text: `Settlement ${vaultId}：${addr ? `setOperator(${shortAddress(addr)}, true)` : '更新 operator'}；setThreshold(${th})`, at: Date.now() });
+      saveState(); toast(`operator 配置已保存：${ops.operators.length} 名 operator，阈值 ${th}`); renderApp();
+    }
+
+    function submitReq(e, type) {
+      if (!wallet()) return toast('请先连接钱包');
+      const f = e.target;
+      const m = currentPath().match(/^#\/assets\/mintburn\/(\d+)$/);
+      if (!m) return toast('未找到资产上下文');
+      const assetId = Number(m[1]);
+      if (!holdsAssetRole('asset-owner', assetId)) return toast('需要该资产的 Issuer（Asset Owner，ownerOf 匹配）才能发起');
+      const list = type === 'mint' ? state.mintReqs : state.burnReqs;
+      const nonce = list.length + 1;
+      const target = type === 'mint' ? f.to.value.trim() : f.from.value.trim(); // mint 用 to；burn 用 from（initiateBurn 的 from 参数）
+      list.push({ nonce, assetId, amount: f.amount.value, to: target, status: 'pending', initiator: wallet().address, at: Date.now() });
+      state.activities.unshift({ text: `${type === 'mint' ? 'Mint' : 'Burn'} 申请 #${nonce} 已发起（${assetById(assetId)?.symbol}）`, at: Date.now() });
+      saveState();
+      toast(`${type === 'mint' ? 'MintInitiated' : 'BurnInitiated'} #${nonce}：请切换到 Token Agent（Bob）账户批准`);
+      renderApp();
+    }
+
+    function approveRequest(type, nonce) {
+      if (!wallet()) return toast('请先连接钱包');
+      const list = type === 'mint' ? state.mintReqs : state.burnReqs;
+      const req = list.find(r => r.nonce === nonce);
+      if (!req) return toast('请求不存在');
+      if (!holdsAssetRole('token-agent', req.assetId)) return toast('需要该资产的 Token Agent（setTokenAgent 任命的地址）才能批准');
+      if (req.status !== 'pending') return toast('该请求已处理');
+      req.status = 'approved'; req.approver = wallet().address;
+      state.activities.unshift({ text: `${type === 'mint' ? 'Mint' : 'Burn'} #${nonce} 已双签批准并执行`, at: Date.now() });
+      saveState();
+      toast(`${type === 'mint' ? 'MintApproved' : 'BurnApproved'} #${nonce}：代币已${type === 'mint' ? '铸造' : '销毁'}`);
+      renderApp();
+    }
+
+    function submitNav(e) {
+      if (!wallet()) return toast('请先连接钱包');
+      if (!hasRole('nav-signer')) return toast('需要 nav-signer（NAVOracle owner 任命的签名者），当前账户不可提交');
+      const f = e.target;
+      const assetId = Number(f.rwaToken.value);
+      const asset = assetById(assetId);
+      if (!asset) return toast('资产不存在');
+      const price = Number(f.nav.value);
+      if (!(price > 0)) return toast('合约要求 price > 0（InvalidNAV）');
+      const ts = Number(f.dataTimestamp.value);
+      const now = Math.floor(Date.now() / 1000);
+      if (!(ts > 0)) return toast('dataTimestamp 必须为正数');
+      if (ts > now) return toast('合约拒绝未来时间戳（FutureData）：dataTimestamp 不能大于当前时间');
+      const prev = state.navRecords[assetId];
+      if (prev && Number(prev.dataTimestamp) >= ts) return toast('合约要求时间戳单调递增（NonMonotonicTimestamp）');
+      if (prev && price > Number(prev.nav) && price > Number(prev.nav) * 1.2 + 1e-12) return toast('较上次 NAV 上涨超过 20% 会被合约拒绝（DeviationTooHigh）');
+      state.navRecords[assetId] = { nav: f.nav.value, dataTimestamp: ts, signer: wallet().address, at: Date.now() };
+      state.activities.unshift({ text: `NAV 更新：${asset?.symbol || assetId} = ${f.nav.value}（rwaToken ${asset?.token || ''}）`, at: Date.now() });
+      saveState();
+      toast('NAVUpdated：签名校验通过，NAV 已落账');
+      renderApp();
+    }
+
+    function submitPor(e) {
+      if (!wallet()) return toast('请先连接钱包');
+      const assetId = Number(e.target.assetId.value);
+      // 逐对象权限：必须是所选资产的 Owner 或该资产任命的 Proof Publisher
+      if (!(holdsAssetRole('proof-publisher', assetId) || holdsAssetRole('asset-owner', assetId))) return toast('所选资产需要 Owner 或任命的 Proof Publisher（Carol），请切换资产或账户');
+      const f = e.target;
+      const docHash = f.documentHash.value.trim();
+      if (!/^0x[0-9a-fA-F]{64}$/.test(docHash)) return toast('documentHash 必须是 0x + 64 位十六进制（keccak256 输出），请选择文档自动生成或手动填写');
+      state.proofs.push({ assetId, documentHash: docHash, uri: f.uri.value.trim(), publisher: wallet().address, at: Date.now() });
+      state.activities.unshift({ text: `储备证明已发布（asset #${assetId}）`, at: Date.now() });
+      saveState();
+      toast('ReserveProofPublished：证明已追加记录');
+      renderApp();
+    }
+
+    function submitWrap(e) {
+      if (!wallet()) return toast('请先连接钱包');
+      const f = e.target;
+      const w = wrappedById(Number(f.wrappedId.value));
+      const direction = f.direction.value;
+      const amount = f.amount.value;
+      const to = (f.to.value || '').trim();
+      if (!w) return toast('包装资产不存在');
+      if (!to) return toast('接收地址 to 不能为空（ZeroAddress 拒绝）');
+      if (w.mode === 0) {
+        state.activities.unshift({ text: `${direction === 'wrap' ? 'Wrap' : 'Unwrap'} ${amount} → ${w.symbol}（Token Custody 1:1，to ${shortAddress(to)}）`, at: Date.now() });
+        toast(`演示成功：${direction === 'wrap' ? 'wrap' : 'unwrap'} ${amount} 已完成（${w.modeLabel}）`);
+      } else if (direction === 'unwrap') {
+        state.activities.unshift({ text: `Unwrap 全额 ${w.symbol} → ReleaseRequested（链外释放，to ${shortAddress(to)}）`, at: Date.now() });
+        toast('演示成功：Proof 模式全额赎回已触发 ReleaseRequested，链外执行释放');
+      } else if (direction === 'wrap' && w.signer && w.signer === shortAddress(wallet().address)) {
+        const nonce = f.nonce.value, expiry = f.expiry.value, documentId = (f.documentId.value || '').trim();
+        state.activities.unshift({ text: `mintWithAuthorization ${amount} ${w.symbol}（Document Proof：nonce ${nonce} / expiry ${expiry} / doc ${documentId || '—'}，to ${shortAddress(to)}）`, at: Date.now() });
+        toast('演示成功：该包装资产任命的 PSM Authorized Signer 已签名，铸币完成');
+      } else {
+        return toast('Document Proof 模式需要该包装资产任命的 PSM Authorized Signer 签名（wrapperController 通过 setAuthorizedSigner 任命，演示为 Bob）');
+      }
+      saveState(); renderApp();
+    }
+
+    function submitWrapped(e) {
+      if (!wallet()) return toast('请先连接钱包');
+      const f = e.target;
+      const mode = Number(f.mode.value);
+      const assetId = Number(f.assetId.value);
+      const decimals = Number(f.decimals.value || 18);
+      const allowPartial = mode === 1 ? false : f.allowPartialUnwrap.value === 'true';
+      const underlyingToken = mode === 1 ? '0x0000...0000' : (f.underlyingToken.value || '').trim() || '0x0000...0000';
+      const id = WRAPPED.length + 3;
+      WRAPPED.push({ assetId, name: f.name.value.trim(), symbol: f.symbol.value.trim().toUpperCase(), mode, modeLabel: mode === 0 ? 'Token Custody' : 'Document Proof', underlying: mode === 1 ? '无链上托管' : '自定义底层', underlyingToken, wrappedToken: '0x9D22...e' + id, decimals, allowPartial, paused: false, controller: shortAddress(wallet().address) });
+      state.activities.unshift({ text: `部署包装资产 ${WRAPPED[WRAPPED.length - 1].symbol}（deployWrappedToken：asset #${assetId}，mode ${mode}，decimals ${decimals}，allowPartial ${allowPartial}）`, at: Date.now() });
+      saveState(); toast(`deployWrappedToken：包装资产已部署，你已成为该资产的 Wrapper Controller`); renderApp();
+    }
+
+    function submitCreateVault(e) {
+      if (!wallet()) return toast('请先连接钱包');
+      const f = e.target;
+      const id = 'vault-' + Date.now().toString(36);
+      const owner = (f.owner.value || '').trim() || shortAddress(wallet().address);
+      VAULTS.push({ id, name: f.name.value.trim(), symbol: f.symbol.value.trim().toUpperCase(), type: f.vaultType.value, owner, address: '0x' + Math.random().toString(16).slice(2, 6) + '...' + Math.random().toString(16).slice(2, 6), network: state.walletSession.network, status: 'pending', nav: '1.0000', adapterRegistry: f.adapterRegistry.value.trim(), initialProduct: f.initialProduct.value, initialCycle: f.initialCycle.value });
+      state.activities.unshift({ text: `创建金库 ${f.name.value.trim()}（deployVault：adapterRegistry ${f.adapterRegistry.value.trim()} / product ${f.initialProduct.value} / cycle ${f.initialCycle.value}）`, at: Date.now() });
+      saveState(); toast('VaultDeployed：金库已部署，你已成为 Owner');
+      navigate(`#/vaults/manage/${id}`);
+    }
+
+    function submitListing(id) {
+      const vault = VAULTS.find(v => v.id === id);
+      if (!vault) return toast('金库不存在');
+      if (!wallet() || vault.owner !== shortAddress(wallet().address)) return toast('只有 Owner 可提交上架申请');
+      vault.status = 'submitted';
+      state.activities.unshift({ text: `上架申请已提交：${vault.name}`, at: Date.now() });
+      saveState(); toast('上架申请已进入 Ops 审核队列'); renderApp();
+    }
+
+    function opsReview(id, action) {
+      const vault = VAULTS.find(v => v.id === id);
+      if (!vault) return toast('金库不存在');
+      vault.status = action === 'approve' ? 'listed' : 'pending';
+      state.activities.unshift({ text: `Ops ${action === 'approve' ? '通过' : '驳回'}上架：${vault.name}`, at: Date.now(), ops: true });
+      saveState();
+      toast(action === 'approve' ? `「${vault.name}」已上架，Products 公开可见` : `「${vault.name}」已驳回，可修改后重提`);
+      renderApp();
+    }
+
+    function togglePause(assetId) {
+      if (!wallet()) return toast('请先连接钱包');
+      const w = WRAPPED.find(x => x.assetId === assetId);
+      if (!w) return toast('包装资产不存在');
+      const isController = (w.controller && w.controller === shortAddress(wallet().address)) || hasRole('governor');
+      if (!isController) return toast('需要 Wrapper Controller（部署者）或 Governor（全局 pause）');
+      w.paused = !w.paused;
+      state.activities.unshift({ text: `${w.paused ? '暂停' : '恢复'}包装资产 ${w.symbol}（pauseAsset，Controller ${shortAddress(wallet().address)}）`, at: Date.now() });
+      saveState(); toast(w.paused ? `pauseAsset：${w.symbol} 已暂停兑换` : `${w.symbol} 已恢复`); renderApp();
+    }
+
+    // ---------- 事件绑定（事件委托） ----------
+    document.addEventListener('click', e => {
+      const menuTrigger = e.target.closest('.navmenu__trigger');
+      if (menuTrigger) { const menu = menuTrigger.closest('.navmenu'); menu.classList.toggle('open'); menu.querySelectorAll('.navmenu__trigger')[0].setAttribute('aria-expanded', menu.classList.contains('open')); return; }
+      const menuItem = e.target.closest('.navmenu__item');
+      if (menuItem) { const menu = menuItem.closest('.navmenu'); menu.classList.remove('open'); menu.querySelectorAll('.navmenu__trigger')[0].setAttribute('aria-expanded', 'false'); }
+      const menuFoot = e.target.closest('.navmenu__foot button');
+      if (menuFoot) { const menu = menuFoot.closest('.navmenu'); menu.classList.remove('open'); menu.querySelectorAll('.navmenu__trigger')[0].setAttribute('aria-expanded', 'false'); }
+      const routeEl = e.target.closest('[data-route]');
+      if (routeEl) { navigate(routeEl.dataset.route); return; }
+      const issuanceTab = e.target.closest('[data-issuance-tab]');
+      if (issuanceTab) { state.activeIssuanceTab = issuanceTab.dataset.issuanceTab; saveState(); navigate('#/issuance/issue'); return; }
+      const open = e.target.closest('[data-open-wallet]');
+      if (open) { openWalletModal(); return; }
+      const close = e.target.closest('[data-close-modal]');
+      if (close && close === e.target) { closeModal(); return; }
+      const toastBtn = e.target.closest('[data-toast]');
+      if (toastBtn) { toast(toastBtn.dataset.toast); return; }
+      const connect = e.target.closest('[data-connect-wallet]');
+      if (connect) { state.walletSession.connected = true; state.walletSession.walletId = connect.dataset.connectWallet; saveState(); closeModal(); toast(`已连接 ${WALLETS[connect.dataset.connectWallet].name}`); renderApp(); return; }
+      const reset = e.target.closest('[data-reset]');
+      if (reset) { resetState(); return; }
+      const approve = e.target.closest('[data-approve]');
+      if (approve) { const [type, nonce] = approve.dataset.approve.split(':'); approveRequest(type, Number(nonce)); return; }
+      const pause = e.target.closest('[data-toggle-pause]');
+      if (pause) { togglePause(Number(pause.dataset.togglePause)); return; }
+      const scrollTo = e.target.closest('[data-scroll]');
+      if (scrollTo) { const el = document.getElementById(scrollTo.dataset.scroll); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
+      const hashBtn = e.target.closest('[data-reg-file-btn], [data-por-file-btn]');
+      if (hashBtn) { const isReg = hashBtn.hasAttribute('data-reg-file-btn'); hashFileTo(isReg ? 'reg-file' : 'por-file', isReg ? 'reg-hash' : 'por-hash', isReg ? 'metadataHash' : 'documentHash'); return; }
+      const listing = e.target.closest('[data-submit-listing]');
+      if (listing) { submitListing(listing.dataset.submitListing); return; }
+      const settleSign = e.target.closest('[data-settle-sign]');
+      if (settleSign) { signSettlementInstruction(settleSign.dataset.settleSign); return; }
+      const settleSubmit = e.target.closest('[data-settle-submit]');
+      if (settleSubmit) { submitSettlementBatch(settleSubmit.dataset.settleSubmit); return; }
+      const settleFinal = e.target.closest('[data-settle-final]');
+      if (settleFinal) { confirmFinalSettlement(settleFinal.dataset.settleFinal); return; }
+      const opsApprove = e.target.closest('[data-ops-approve]');
+      if (opsApprove) { opsReview(opsApprove.dataset.opsApprove, 'approve'); return; }
+      const opsReject = e.target.closest('[data-ops-reject]');
+      if (opsReject) { opsReview(opsReject.dataset.opsReject, 'reject'); return; }
+      const logout = e.target.closest('[data-ops-logout]');
+      if (logout) { state.opsSession = { authenticated: false, reviewer: '' }; saveState(); navigate('#/ops/login'); toast('已退出审核后台'); return; }
+    });
+
+    document.addEventListener('mousedown', e => {
+      const inside = e.target.closest('.navmenu');
+      if (!inside) document.querySelectorAll('.navmenu.open').forEach(m => { m.classList.remove('open'); m.querySelector('.navmenu__trigger').setAttribute('aria-expanded', 'false'); });
+    });
+
+    document.addEventListener('change', e => {
+      if (e.target.matches('[data-network-select]')) { state.walletSession.network = e.target.value; saveState(); renderApp(); return; }
+      if (e.target.matches('[data-connect-network]')) { state.walletSession.network = e.target.value; saveState(); renderApp(); return; }
+      if (e.target.matches('[data-modal-network]')) { state.walletSession.network = e.target.value; saveState(); openWalletModal(); return; }
+      if (e.target.matches('[data-wrap-asset]')) {
+        const note = document.getElementById('wrap-proof-note');
+        if (note) { const w = wrappedById(Number(e.target.value)); note.style.display = w && w.mode === 1 ? 'block' : 'none'; }
+        const status = document.getElementById('wrap-signer-status');
+        if (status) { const w = wrappedById(Number(e.target.value)); status.innerHTML = w ? psmSignerStatus(w) : ''; }
+      }
+      if (e.target.matches('[data-por-asset]')) { state.activePorAsset = Number(e.target.value); saveState(); renderApp(); return; }
+      if (e.target.matches('[data-wrapped-mode]')) {
+        const field = document.getElementById('wrapped-underlying-field');
+        if (field) {
+          const proof = e.target.value === '1';
+          field.style.display = proof ? 'none' : 'block';
+          const input = field.querySelector('input[name="underlyingToken"]');
+          if (input) input.value = proof ? '0x0000000000000000000000000000000000000000' : '';
+        }
+      }
+      if (e.target.matches('[data-reg-file], [data-por-file]')) { hashFileTo(e.target.id, e.target.id === 'reg-file' ? 'reg-hash' : 'por-hash', e.target.id === 'reg-file' ? 'metadataHash' : 'documentHash'); return; }
+    });
+
+    document.addEventListener('submit', e => {
+      const map = { 'reg-form': submitRegister, 'mint-form': ev => submitReq(ev, 'mint'), 'burn-form': ev => submitReq(ev, 'burn'), 'nav-form': submitNav, 'por-form': submitPor, 'wrap-form': submitWrap, 'wrapped-form': submitWrapped, 'create-vault-form': submitCreateVault, 'vault-roles-form': submitVaultRoles, 'asset-appoint-form': submitAssetAppointments, 'vault-appoint-form': submitVaultAppointments, 'settle-ops-form': submitSettleOps, 'ops-login-form': submitOpsLogin };
+      const fn = map[e.target.id];
+      if (fn) { e.preventDefault(); fn(e); }
+    });
+
+    function submitOpsLogin(e) {
+      const f = e.target;
+      if (f.email.value.trim() === 'reviewer@hypertessera.demo' && f.password.value === 'Demo2026!') {
+        state.opsSession = { authenticated: true, reviewer: f.email.value.trim() };
+        saveState(); toast('登录成功，进入审核 Dashboard'); navigate('#/ops/dashboard');
+      } else {
+        toast('账号或密码错误（演示：reviewer@hypertessera.demo / Demo2026!）');
+      }
+    }
+
+    function init() {
+      if (!location.hash) location.hash = '#/';
+      window.addEventListener('hashchange', renderApp);
+      renderApp();
+    }
+    init();
+  </script>
+</body>
+</html>

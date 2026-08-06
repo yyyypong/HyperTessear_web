@@ -7,6 +7,7 @@ const deploymentBindings = new WeakMap();
 function bindDeployment(sdk, deployment) {
   deploymentBindings.set(sdk, Object.freeze({
     chainId: Number(deployment.chainId),
+    profile: deployment.profile ?? 'legacy',
     settlement: deployment.addresses.settlement,
     reservePSM: deployment.addresses.reservePSM,
     lpAdapter: deployment.addresses.lpAdapter,
@@ -18,11 +19,17 @@ function bindDeployment(sdk, deployment) {
 }
 
 export function createReadSdk(deployment, eip1193Provider) {
-  return bindDeployment(new HyperTesseraSDK(deployment.addresses, createBrowserProvider(eip1193Provider)), deployment);
+  return bindDeployment(
+    new HyperTesseraSDK(deployment.addresses, createBrowserProvider(eip1193Provider), deployment.profile),
+    deployment,
+  );
 }
 
 export async function createWriteSdk(deployment, eip1193Provider) {
-  return bindDeployment(new HyperTesseraSDK(deployment.addresses, await getWriteSigner(eip1193Provider)), deployment);
+  return bindDeployment(
+    new HyperTesseraSDK(deployment.addresses, await getWriteSigner(eip1193Provider), deployment.profile),
+    deployment,
+  );
 }
 
 /** Only SDKs constructed from a deployment manifest in this module receive a binding. */

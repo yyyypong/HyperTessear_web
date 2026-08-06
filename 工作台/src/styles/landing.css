@@ -439,9 +439,14 @@
   flex-direction: column;
   overflow: hidden;
   /* bright paper field — also the standing backdrop wherever WebGPU is
-     unavailable, so the cover never renders bare */
+     unavailable, so the cover never renders bare.
+     Elevated pass: a cooler, more luminous top that catches light, a soft
+     warm core where the type sits, and a quiet cool recession at the foot
+     so the copy floats on a sheet with genuine depth rather than a flat wash. */
   background:
-    radial-gradient(120% 90% at 50% 0%, #FAFBFC 0%, #F2F3F6 55%, #E6E8ED 100%);
+    radial-gradient(130% 110% at 78% -8%, rgba(255, 255, 255, 1) 0%, rgba(246, 247, 250, .55) 42%, rgba(238, 240, 246, 0) 72%),
+    radial-gradient(120% 92% at 18% 0%, rgba(255, 255, 255, .9) 0%, rgba(241, 243, 248, .45) 48%, rgba(233, 236, 243, 0) 76%),
+    linear-gradient(180deg, #F6F7FA 0%, #EEF0F6 54%, #E4E7EE 100%);
   color: var(--ld-ink);
   font-family: var(--font-body);
 }
@@ -457,7 +462,9 @@
   align-items: center;
   justify-content: center;
   background:
-    radial-gradient(120% 90% at 50% 0%, #FAFBFC 0%, #F2F3F6 55%, #E6E8ED 100%);
+    radial-gradient(130% 110% at 78% -8%, rgba(255, 255, 255, 1) 0%, rgba(246, 247, 250, .55) 42%, rgba(238, 240, 246, 0) 72%),
+    radial-gradient(120% 92% at 18% 0%, rgba(255, 255, 255, .9) 0%, rgba(241, 243, 248, .45) 48%, rgba(233, 236, 243, 0) 76%),
+    linear-gradient(180deg, #F6F7FA 0%, #EEF0F6 54%, #E4E7EE 100%);
   opacity: 1;
   transition: opacity .8s var(--ease);
 }
@@ -512,9 +519,114 @@
   position: absolute;
   inset: 0;
   z-index: 10;
+  overflow: hidden;
 }
 .lhero__shader-wrap { width: 100%; height: 100%; }
 .lhero__shader { display: block; width: 100%; height: 100%; }
+
+/* ---- elevation layers (render regardless of WebGPU) ---------------- */
+
+/* a cool luminous spill from the top-left — the sheet catches light the
+   way a matte-plastic cover does under a single soft source */
+.lhero__glow--top {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(58% 42% at 22% 6%, rgba(255, 255, 255, .95) 0%, rgba(255, 255, 255, 0) 100%),
+    radial-gradient(42% 34% at 88% 10%, rgba(255, 255, 255, .7) 0%, rgba(255, 255, 255, 0) 100%);
+  mix-blend-mode: screen;
+}
+/* a gentle cool recession along the bottom edge — grounds the hero so it
+   hands off to the light body below without a visible seam */
+.lhero__glow--base {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(to top, rgba(224, 227, 236, .9) 0%, rgba(224, 227, 236, 0) 34%);
+  opacity: .55;
+}
+
+/* precision hairlines — a quiet coordinate hint in the top-left that
+   reads "engineered" without ever shouting. Pure decoration. */
+.lhero__grid {
+  position: absolute;
+  top: 34px;
+  left: 34px;
+  width: 92px;
+  height: 60px;
+  pointer-events: none;
+  opacity: .55;
+}
+.lhero__grid-tick {
+  position: absolute;
+  top: -9px;
+  left: -9px;
+  width: 5px;
+  height: 5px;
+  border: 1px solid rgba(26, 26, 26, .4);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, .6);
+}
+.lhero__grid-label {
+  position: absolute;
+  top: 3px;
+  right: 0;
+  font-size: .56rem;
+  font-weight: 500;
+  letter-spacing: .22em;
+  color: rgba(26, 26, 26, .4);
+  font-variant-numeric: tabular-nums;
+}
+.lhero__grid-axis {
+  position: absolute;
+  background: linear-gradient(to right, rgba(26, 26, 26, .22), rgba(26, 26, 26, 0));
+}
+.lhero__grid-axis--x { left: 0; right: 0; top: 26px; height: 1px; }
+.lhero__grid-axis--y {
+  left: 0; top: 0; bottom: 0; width: 1px;
+  background: linear-gradient(to bottom, rgba(26, 26, 26, .22), rgba(26, 26, 26, 0));
+}
+/* the three tiny tick marks riding the axes — an instrument dial, not a grid */
+.lhero__grid-axis--x::before,
+.lhero__grid-axis--x::after {
+  content: "";
+  position: absolute;
+  top: -2px;
+  width: 1px;
+  height: 5px;
+  background: rgba(26, 26, 26, .3);
+}
+.lhero__grid-axis--x::before { left: 22px; }
+.lhero__grid-axis--x::after { left: 54px; }
+.lhero__grid-axis--y::before {
+  content: "";
+  position: absolute;
+  left: -2px;
+  top: 18px;
+  width: 5px;
+  height: 1px;
+  background: rgba(26, 26, 26, .3);
+}
+
+/* fixed ultra-fine paper tooth above the shader — a static noise field so
+   the cover never reads flat, WebGPU or not */
+.lhero__grain {
+  position: absolute;
+  inset: -50%;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity: .028;
+  mix-blend-mode: multiply;
+  animation: lgrain 30s steps(10) infinite;
+}
+@keyframes lgrain {
+  0%, 100% { transform: translate(0, 0); }
+  20% { transform: translate(-2%, 1.4%); }
+  40% { transform: translate(1.6%, -1.1%); }
+  60% { transform: translate(-1.2%, -1.8%); }
+  80% { transform: translate(1.8%, 1.2%); }
+}
 
 /* the type hangs off the bottom edge — gallery-wall composition, all
    the air sits above it where the backdrop can breathe */
@@ -532,12 +644,24 @@
 .lhero__copy { width: 100%; }
 
 .lhero__eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
   font-size: .7rem;
   font-weight: 500;
   letter-spacing: .2em;
   text-transform: uppercase;
   color: rgba(26, 26, 26, .5);
   animation: lherofade .9s var(--ease) both;
+}
+/* a tiny squared dot before the eyebrow — a registration mark that hints
+   at precision without breaking the quiet tone */
+.lhero__eyebrow-dot {
+  width: 5px;
+  height: 5px;
+  border: 1px solid rgba(26, 26, 26, .55);
+  border-radius: 1px;
+  flex: none;
 }
 /* Hanzi needs less tracking than a small-caps Latin label to read as
    one phrase rather than spaced-out characters */

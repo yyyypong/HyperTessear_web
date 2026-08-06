@@ -53,16 +53,37 @@ export function Hero() {
   return (
     <section className="lhero">
       <div className="lhero__bg">
+        {/* standing elevation — these render regardless of WebGPU, so the
+            cover never loses its depth even without the shader */}
+        <div className="lhero__glow lhero__glow--top" aria-hidden="true" />
+        <div className="lhero__glow lhero__glow--base" aria-hidden="true" />
+
+        {/* precision hairlines — a quiet coordinate hint, top-left tick +
+            baseline rule, that reads "engineered" without shouting */}
+        <div className="lhero__grid" aria-hidden="true">
+          <span className="lhero__grid-tick" />
+          <span className="lhero__grid-label">X · Y</span>
+          <span className="lhero__grid-axis lhero__grid-axis--x" />
+          <span className="lhero__grid-axis lhero__grid-axis--y" />
+        </div>
+
         {backdrop && (
           <Suspense fallback={null}>
             <HeroShader />
           </Suspense>
         )}
+
+        {/* paper tooth — a fixed ultra-fine grain above the shader so the
+            field never reads flat, WebGPU or not */}
+        <div className="lhero__grain" aria-hidden="true" />
       </div>
 
       <div className="lhero__stage">
         <div className="lhero__copy">
-          <div className="lhero__eyebrow">{t.hero.eyebrow}</div>
+          <div className="lhero__eyebrow">
+            <span className="lhero__eyebrow-dot" aria-hidden="true" />
+            {t.hero.eyebrow}
+          </div>
           <div className="lhero__rule" />
 
           <h1 className="lhero__title">
@@ -85,6 +106,12 @@ export function Hero() {
               <button className="lbtn lbtn--wire">{t.hero.ctaSecondary}</button>
             </div>
           </div>
+        </div>
+
+        {/* scroll hint — a quiet ticked hairline that gently breathes */}
+        <div className="lhero__scroll" aria-hidden="true">
+          <span className="lhero__scroll-label">scroll</span>
+          <span className="lhero__scroll-line" />
         </div>
       </div>
     </section>
