@@ -29,13 +29,13 @@ const REQUIRED_ROLES = [
 ];
 
 const REQUIRED_ACTIONS_BY_ROLE = {
-  governor: ['governor.members.manage', 'protocol.modules.pause', 'psm.protocol.pause', 'revenue.treasury.set', 'nav.signer.manage'],
+  governor: ['governor.members.manage', 'protocol.modules.pause', 'psm.protocol.pause', 'revenue.treasury.set', 'nav.signer.manage', 'protocol.fee.config', 'revenue.withdraw', 'revenue.withdraw.token', 'revenue.sources.manage', 'nav.deviation.set'],
   'vault-owner': ['vault.roles.set', 'vault.settlement.configure', 'vault.modules.bind', 'vault.adapters.configure', 'vault.timelock.manage', 'vault.owner.transfer'],
-  curator: ['vault.fees.set', 'vault.adapters.manage', 'vault.orders.manage', 'vault.data-policy.set'],
+  curator: ['vault.fees.set', 'vault.adapters.manage', 'vault.orders.manage', 'vault.data-policy.set', 'request.mark-refundable', 'claim.record', 'vault.evict-deposit'],
   guardian: ['vault.pause', 'vault.order.cancel', 'vault.allocator.freeze', 'vault.timelock.cancel'],
   allocator: ['vault.buy', 'vault.sell', 'vault.rebalance', 'vault.deal.clear', 'vault.bridge'],
-  'settlement-operator': ['settlement.instruction.sign'],
-  keeper: ['lifecycle.open-subscription', 'lifecycle.finalize-subscription', 'lifecycle.start-calculation', 'lifecycle.enter-final-settlement', 'lifecycle.enter-maturing', 'lifecycle.enter-claiming', 'lifecycle.close-product', 'request.mark-refundable', 'claim.record'],
+  'settlement-operator': ['settlement.instruction.sign', 'settlement.return-principal'],
+  keeper: ['lifecycle.open-subscription', 'lifecycle.finalize-subscription', 'lifecycle.start-calculation', 'lifecycle.enter-final-settlement', 'lifecycle.enter-maturing', 'lifecycle.enter-claiming', 'lifecycle.close-product'],
   'asset-owner': ['asset.register', 'asset.metadata.update', 'asset.owner.transfer', 'asset.deactivate', 'asset.roles.set', 'mint.initiate', 'burn.initiate'],
   'token-agent': ['mint.approve', 'burn.approve'],
   'proof-publisher': ['proof.publish'],
@@ -51,6 +51,8 @@ const CURRENT_GET_CONTRACT_MAPPINGS = {
   'protocol.modules.pause': 'StateManager.pauseModule/unpauseModule',
   'psm.protocol.pause': 'ReservePSM.pause/unpause',
   'revenue.treasury.set': 'RevenuePool.setYieldStrategy',
+  'revenue.withdraw': 'RevenuePool.withdraw',
+  'revenue.sources.manage': 'RevenuePool.addAuthorizedSource/removeAuthorizedSource',
   'nav.signer.manage': 'NAVOracle.addAuthorizedSigner/removeAuthorizedSigner',
   'vault.roles.set': 'BaseVault.setOperator',
   'vault.settlement.configure': 'Settlement.addOperator/removeOperator/setThreshold',
@@ -133,7 +135,7 @@ describe('role registry', () => {
   });
 
   it('maps every normative getContract action to its executable legacy ABI method', () => {
-    expect(Object.keys(CURRENT_GET_CONTRACT_MAPPINGS)).toHaveLength(31);
+    expect(Object.keys(CURRENT_GET_CONTRACT_MAPPINGS)).toHaveLength(33);
     for (const [actionId, adapterMethod] of Object.entries(CURRENT_GET_CONTRACT_MAPPINGS)) {
       expect(ACTION_DEFINITIONS[actionId].capability.legacy).toMatchObject({
         state: CAPABILITY_STATES.AVAILABLE,

@@ -48,6 +48,28 @@ export function loadVaultOverview({ sdk, vault, signal, now } = {}) {
   });
 }
 
+export function loadFeeOverview({ sdk, vault, signal, now } = {}) {
+  return load('feeOverviewUnavailable', { signal, now }, async () => {
+    if (!sdk?.getContract || typeof sdk.supportsFunction !== 'function') return { supported: false, values: {} };
+    const contract = sdk.getContract('EarnVault', vault);
+    const read = async (name, fallback) => {
+      if (!sdk.supportsFunction('EarnVault', name)) return fallback;
+      try { return await contract[name](); } catch { return fallback; }
+    };
+    const [performanceFeeBps, performanceFeeRecipient, protocolFeeShareBps, revenuePool, feeHighWaterMark] = await Promise.all([
+      read('performanceFeeBps', null),
+      read('performanceFeeRecipient', null),
+      read('protocolFeeShareBps', null),
+      read('revenuePool', null),
+      read('feeHighWaterMark', null),
+    ]);
+    return {
+      supported: true,
+      values: { performanceFeeBps, performanceFeeRecipient, protocolFeeShareBps, revenuePool, feeHighWaterMark },
+    };
+  });
+}
+
 export function loadSettlementOverview({ sdk, account, vault, signal, now } = {}) {
   return load('settlementOverviewUnavailable', { signal, now }, async () => {
     // The target Settlement scopes operators and thresholds per vault; the

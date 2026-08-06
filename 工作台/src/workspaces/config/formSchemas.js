@@ -33,6 +33,11 @@ export const FORM_SCHEMAS = Object.freeze({
   'psm.protocol.pause': { id: 'psm.protocol.pause', fields: [field('paused', 'boolean')] },
   'revenue.treasury.set': { id: 'revenue.treasury.set', fields: [field('treasury', 'address')] },
   'nav.signer.manage': { id: 'nav.signer.manage', fields: [vault(), account(), field('operation', 'select', { options: ['add', 'remove'] })] },
+  'protocol.fee.config': { id: 'protocol.fee.config', fields: [vault(), field('revenuePool', 'address'), field('protocolFeeShareBps', 'integer', { validation: 'range', validationMeta: { min: 0, max: 10000 } })] },
+  'revenue.withdraw': { id: 'revenue.withdraw', fields: [field('recipient', 'address'), field('amount', 'amount', { decimals: 6, validation: 'positive', validationMeta: { min: '1' } })] },
+  'revenue.withdraw.token': { id: 'revenue.withdraw.token', fields: [field('token', 'address'), field('to', 'address'), field('amount', 'amount', { decimals: 6, validation: 'positive', validationMeta: { min: '1' } })] },
+  'revenue.sources.manage': { id: 'revenue.sources.manage', fields: [field('source', 'address'), field('enabled', 'boolean')] },
+  'nav.deviation.set': { id: 'nav.deviation.set', fields: [field('navDeviationMaxBps', 'integer', { validation: 'range', validationMeta: { min: 1, max: 10000 } })] },
 
   'vault.roles.set': { id: 'vault.roles.set', fields: [vault(), field('role', 'select', { options: ['curator', 'guardian', 'allocator', 'keeper'] }), account(), field('enabled', 'boolean')] },
   'vault.settlement.configure': { id: 'vault.settlement.configure', fields: [vault(), field('operation', 'select', { options: ['add-operator', 'remove-operator', 'set-threshold'] }), field('account', 'address', { required: false }), field('threshold', 'integer', { required: false, validation: 'positive', validationMeta: { min: 1 } })] },
@@ -58,6 +63,8 @@ export const FORM_SCHEMAS = Object.freeze({
   'vault.bridge': { id: 'vault.bridge', fields: [vault(), field('adapter', 'address'), amount()] },
 
   'settlement.instruction.sign': { id: 'settlement.instruction.sign', fields: [vault(), field('instruction', 'json'), deadline()] },
+  'settlement.return-principal': { id: 'settlement.return-principal', fields: [vault(), field('amount', 'amount', { decimals: 6, validation: 'positive', validationMeta: { min: '1' } })] },
+  'vault.evict-deposit': { id: 'vault.evict-deposit', fields: [vault(), requestId()] },
   'lifecycle.open-subscription': { id: 'lifecycle.open-subscription', fields: [vault()] },
   'lifecycle.finalize-subscription': { id: 'lifecycle.finalize-subscription', fields: [vault()] },
   'lifecycle.start-calculation': { id: 'lifecycle.start-calculation', fields: [vault()] },

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
+import { formatUnits } from 'ethers';
 import { useI18n } from '../../i18n';
 import { useWallet } from '../../wallet';
 import ManagementEntry from '../../components/access/ManagementEntry';
@@ -7,6 +8,7 @@ import { RoleSidebar } from '../../components/blueprint/RoleSidebar';
 import WorkspaceFrame from '../../components/blueprint/WorkspaceFrame';
 import RoleWorkspacePage from '../../workspaces/pages/RoleWorkspacePage';
 import SettlementOperatorWorkspace from './SettlementOperatorWorkspace';
+import { loadFeeOverview } from '../../workspaces/core/workspaceQueries';
 import { useReadSdk, useVaultDirectory, getVaultRoleMarkers, getDemoVaultRoleMarkers, VAULT_DOMAIN_ROLES, roleLabels } from '../../workspaces/core/onchainLists';
 
 function useVaultRoleMarkers(vaultAddress) {
@@ -31,10 +33,72 @@ function useVaultRoleMarkers(vaultAddress) {
   return { markers: state.markers, status: state.status, reload: () => setGeneration(g => g + 1) };
 }
 
+const DEMO_FEE_RECIPIENT = '0x1111111111111111111111111111111111111111';
+const DEMO_REVENUE_POOL = '0x5555555555555555555555555555555555555555';
+
+function useFeeOverview(vaultAddress) {
+  const { sdk, demo } = useReadSdk();
+  const [state, setState] = useState({ data: null, status: 'idle' });
+  useEffect(() => {
+    if (!vaultAddress) return undefined;
+    let cancelled = false;
+    if (demo) {
+      setState({
+        status: 'success',
+        data: {
+          supported: true,
+          values: {
+            performanceFeeBps: 2000n,
+            performanceFeeRecipient: DEMO_FEE_RECIPIENT,
+            protocolFeeShareBps: 1000n,
+            revenuePool: DEMO_REVENUE_POOL,
+            feeHighWaterMark: 1_000_000n * 10n ** 6n,
+          },
+        },
+      });
+      return () => { cancelled = true; };
+    }
+    setState(prev => (prev.status === 'idle' ? { ...prev, status: 'loading' } : prev));
+    loadFeeOverview({ sdk, vault: vaultAddress })
+      .then(result => { if (!cancelled) setState({ data: result.data, status: result.status }); })
+      .catch(() => { if (!cancelled) setState({ data: null, status: 'error' }); });
+    return () => { cancelled = true; };
+  }, [sdk, demo, vaultAddress]);
+  return state;
+}
+
+function FeeOverviewCard({ t, data }) {
+  const values = data?.values ?? {};
+  const bps = value => (value === null || value === undefined ? '—' : `${Number(value) / 100}%`);
+  const usdt = value => (value === null || value === undefined ? '—' : formatUnits(value, 6));
+  const addr = value => (value ? `${String(value).slice(0, 6)}…${String(value).slice(-4)}` : '—');
+  const item = (label, value, title) => (
+    <div className="bp-stat" title={title ?? value}>
+      <div className="bp-stat__label">{label}</div>
+      <div className="bp-stat__value bp-stat__value--small">{value}</div>
+    </div>
+  );
+  return (
+    <div className="bp-card bp-card-pad">
+      <div className="bp-row" style={{ justifyContent: 'space-between' }}>
+        <h4 className="bp-card-title">{t.bp.vaultDetail.feeOverview}</h4>
+      </div>
+      <div className="bp-stats">
+        {item(t.bp.vaultDetail.feePerfBps, bps(values.performanceFeeBps))}
+        {item(t.bp.vaultDetail.feeHighWater, usdt(values.feeHighWaterMark))}
+        {item(t.bp.vaultDetail.feeProtocolShare, bps(values.protocolFeeShareBps))}
+        {item(t.bp.vaultDetail.feeRecipient, addr(values.performanceFeeRecipient), values.performanceFeeRecipient ?? undefined)}
+        {item(t.bp.vaultDetail.feeRevenuePool, addr(values.revenuePool), values.revenuePool ?? undefined)}
+      </div>
+    </div>
+  );
+}
+
 function VaultDetailInner() {
   const { t } = useI18n();
   const { vaultAddress, role: roleParam } = useParams();
   const { markers, status } = useVaultRoleMarkers(vaultAddress);
+  const fee = useFeeOverview(vaultAddress);
   const labels = useMemo(() => roleLabels(t, VAULT_DOMAIN_ROLES), [t]);
 
   if (!vaultAddress) {
@@ -71,6 +135,9 @@ function VaultDetailInner() {
           note={t.bp.vaultDetail.sidebarNote}
         />
         <div className="bp-workspace-main">
+          {fee.status === 'success' && fee.data?.supported !== false && (
+            <FeeOverviewCard t={t} data={fee.data} />
+          )}
           {status === 'loading' ? (
             <div className="bp-card bp-card-pad"><p className="bp-muted">{t.common.loading}</p></div>
           ) : heldRoles.length === 0 ? (
