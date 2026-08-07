@@ -172,6 +172,135 @@ function toSeriesPoint(row) {
   return { date: row.captured_at, value: num(row.value_num) };
 }
 
+/* ================================================================
+   Data-pages mappers (HyperTessera_Data_Pages_Plan.md)
+   ================================================================ */
+
+/**
+ * A protocol_breakdowns row -> a chart slice.
+ *
+ * `share` is computed against the total passed in rather than stored,
+ * so a slice can never disagree with the headline figure above it.
+ * `slug` survives because the plan (§1.2) wants the AUM composition
+ * chart to open the corresponding product page.
+ */
+function toBreakdown(row, total) {
+  const value = row.value_num === null ? null : num(row.value_num);
+  const count = row.value_int === null ? null : Number(row.value_int);
+  const basis = value === null ? count : value;
+  return {
+    label: row.label,
+    slug: row.slug || null,
+    value,
+    count,
+    share: total ? (basis ?? 0) / total : null,
+  };
+}
+
+/** product_vault + derived capacity -> the §2.1/§2.2 product header. */
+function toVault(row, { capacity, tvl } = {}) {
+  if (!row) return null;
+  const cap = num(capacity);
+  const aum = num(tvl);
+  return {
+    vaultAddress: row.vault_address,
+    shareSymbol: row.share_symbol,
+    productType: row.product_type,
+    issuer: row.issuer,
+    riskRating: row.risk_rating,
+    totalSupply: num(row.total_supply),
+    sharePrice: num(row.share_price),
+    lastSettlementPrice: num(row.last_settlement_price),
+    currentCycle: row.current_cycle,
+    cycleState: row.cycle_state,
+    productState: row.product_state,
+    performanceFeeBps: row.performance_fee_bps,
+    protocolFeeShareBps: row.protocol_fee_share_bps,
+    maturityDate: row.maturity_date,
+    investors: row.investors,
+    subscriptionCap: cap,
+    // Plan §2.2: available capacity is the cap less what is used.
+    availableCapacity: cap === null || aum === null ? null : Math.max(0, cap - aum),
+  };
+}
+
+function toCycle(row) {
+  return {
+    cycleNo: row.cycle_no,
+    settledAt: row.settled_at,
+    settlementPrice: num(row.settlement_price),
+    shareSupply: num(row.share_supply),
+    totalAssets: num(row.total_assets),
+    cycleYield: num(row.cycle_yield),
+    feeAssets: num(row.fee_assets),
+    feeShares: num(row.fee_shares),
+    protocolFeeShares: num(row.protocol_fee_shares),
+  };
+}
+
+/** An allocation row. `share` is against Product AUM (plan §2.4). */
+function toAllocation(row, locale, aum) {
+  const value = num(row.real_assets);
+  return {
+    id: row.id,
+    kind: row.kind,
+    name: row.name,
+    address: row.contract_address,
+    network: row.network,
+    realAssets: value,
+    share: aum ? value / aum : null,
+    description: locale === 'en' ? row.description_en : row.description_zh,
+    explorerUrl: row.explorer_url,
+  };
+}
+
+function toRwaAsset(row) {
+  const supply = num(row.total_supply);
+  const nav = num(row.nav);
+  // Plan §1.3: an asset with no NAV is excluded from the valuation,
+  // never valued at zero — so `value` stays null rather than 0.
+  const valued = row.status === 'active' && row.token_address !== null && nav !== null;
+  return {
+    id: row.id,
+    name: row.name,
+    assetType: row.asset_type,
+    network: row.network,
+    tokenSymbol: row.token_symbol,
+    tokenAddress: row.token_address,
+    totalSupply: supply,
+    nav,
+    status: row.status,
+    value: valued ? supply * nav : null,
+    excludedReason: valued
+      ? null
+      : row.status !== 'active' ? 'inactive'
+        : row.token_address === null ? 'no_token'
+          : 'no_nav',
+  };
+}
+
+function toHolding(row) {
+  return {
+    id: row.id,
+    label: row.asset_label,
+    kind: row.asset_kind,
+    network: row.network,
+    amount: num(row.amount),
+    valueUsd: num(row.value_usd),
+    priced: Boolean(row.priced),
+  };
+}
+
+function toFlow(row, locale) {
+  return {
+    id: row.id,
+    direction: row.direction,
+    source: locale === 'en' ? row.source_en : row.source_zh,
+    amount: num(row.amount),
+    occurredAt: row.occurred_at,
+  };
+}
+
 module.exports = {
   assertNoInternalFields,
   localisedPair,
@@ -186,4 +315,11 @@ module.exports = {
   toNavPoint,
   toDocument,
   toActivity,
+  toBreakdown,
+  toVault,
+  toCycle,
+  toAllocation,
+  toRwaAsset,
+  toHolding,
+  toFlow,
 };

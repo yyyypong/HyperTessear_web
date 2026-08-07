@@ -13,6 +13,7 @@ import { createAmountDecimalsResolver, createReadSdk } from '../core/createSdk';
 import { useTransactions } from '../core/transactionStore';
 import { actionRequiresAmountDecimals, validateActionInput, ValidationError } from '../core/validators';
 import { getWriteSigner } from '../core/walletRunner';
+import { createDemoAdapter, createDemoAmountDecimalsResolver, createDemoReadSdk, createDemoSigner, isDemoWallet } from '../core/demoLayer';
 import { createCurrentAdapter } from '../sdk/currentAdapter';
 
 const CHAIN_ID = 97;
@@ -114,9 +115,9 @@ function prevalidateRaw(actionId, rawInput) {
   return validateActionInput(actionId, { ...rawInput, [amountField]: '1' }, { amountDecimals: 0 });
 }
 
-function initialCapability(action, wallet, deployment, adapter) {
+function initialCapability(action, wallet, deployment, adapter, demo = false) {
   const profile = action.capability?.legacy;
-  if (!wallet?.provider) return { state: CAPABILITY_STATES.WALLET_REQUIRED, detail: {} };
+  if (!wallet?.provider && !demo) return { state: CAPABILITY_STATES.WALLET_REQUIRED, detail: {} };
   if (Number(wallet.chainId) !== deployment.chainId) return { state: CAPABILITY_STATES.WRONG_NETWORK, detail: {} };
   if (profile?.state === CAPABILITY_STATES.TARGET_ONLY || !profile?.adapterMethod) {
     return {
@@ -249,21 +250,29 @@ async function verifyNormalized({ actionId, input, sdk, deployment, account, ass
 export default function PublicWorkspacePage() {
   const wallet = useWallet();
   const transactions = useTransactions();
+  const demo = isDemoWallet(wallet);
   const deployment = getDeployment(CHAIN_ID);
   const sdkResult = useMemo(() => {
+    if (demo) return Number(wallet.session?.chainId) === deployment.chainId
+      ? { sdk: createDemoReadSdk(deployment), error: null }
+      : { sdk: null, error: null };
     if (!wallet.session?.provider || Number(wallet.session.chainId) !== deployment.chainId) return { sdk: null, error: null };
     try { return { sdk: createReadSdk(deployment, wallet.session.provider), error: null }; }
     catch { return { sdk: null, error: 'The configured deployment could not be initialized.' }; }
-  }, [deployment, wallet.session?.provider, wallet.session?.chainId]);
+  }, [deployment, demo, wallet.session?.provider, wallet.session?.chainId]);
   const readSdk = sdkResult.sdk;
-  const adapter = useMemo(() => readSdk ? createCurrentAdapter({ readSdk, writeSdk: readSdk }) : null, [readSdk]);
-  const getAmountDecimals = useMemo(() => readSdk ? createAmountDecimalsResolver(readSdk) : null, [readSdk]);
+  const adapter = useMemo(() => demo
+    ? createDemoAdapter(deployment)
+    : readSdk ? createCurrentAdapter({ readSdk, writeSdk: readSdk }) : null, [demo, deployment, readSdk]);
+  const getAmountDecimals = useMemo(() => demo
+    ? createDemoAmountDecimalsResolver()
+    : readSdk ? createAmountDecimalsResolver(readSdk) : null, [demo, readSdk]);
   const identityKey = `${canonicalAddress(wallet.session?.address)?.toLowerCase() ?? 'disconnected'}|${Number(wallet.session?.chainId) || 'no-chain'}|${deployment.chainId}:${deployment.profile}:${deployment.sourceCommit}`;
   const identityRef = useRef(identityKey);
   const operationGenerationRef = useRef(0);
   identityRef.current = identityKey;
 
-  const capabilityFor = action => initialCapability(action, wallet.session, deployment, adapter);
+  const capabilityFor = action => initialCapability(action, wallet.session, deployment, adapter, demo);
 
   const onExecute = async (action, rawInput) => {
     prevalidateRaw(action.id, rawInput);
@@ -274,12 +283,12 @@ export default function PublicWorkspacePage() {
         throw new Error('Workspace operation changed');
       }
     };
-    if (!readSdk || !adapter || !wallet.session?.provider) throw new Error('Public workspace unavailable');
-    const executionProvider = wallet.session.provider;
+    if (!demo && (!readSdk || !adapter || !wallet.session?.provider)) throw new Error('Public workspace unavailable');
+    const executionProvider = demo ? null : wallet.session.provider;
 
-    const currentChainId = Number(await executionProvider.request({ method: 'eth_chainId' }));
+    const currentChainId = demo ? deployment.chainId : Number(await executionProvider.request({ method: 'eth_chainId' }));
     assertCurrent();
-    const accounts = await executionProvider.request({ method: 'eth_accounts' });
+    const accounts = demo ? [wallet.session.address] : await executionProvider.request({ method: 'eth_accounts' });
     assertCurrent();
     const currentAccount = canonicalAddress(accounts?.[0]);
     const sessionAccount = canonicalAddress(wallet.session.address);
@@ -307,7 +316,7 @@ export default function PublicWorkspacePage() {
     await verifyNormalized({ actionId: action.id, input: normalized, sdk: readSdk, deployment, account: currentAccount, assertCurrent });
     assertCurrent();
 
-    const signer = await getWriteSigner(executionProvider);
+    const signer = demo ? createDemoSigner(currentAccount) : await getWriteSigner(executionProvider);
     assertCurrent();
     const signerAddress = canonicalAddress(await signer?.getAddress?.());
     assertCurrent();
@@ -315,6 +324,7 @@ export default function PublicWorkspacePage() {
 
     const assertWalletCurrent = async writeSigner => {
       assertCurrent();
+      if (demo) return;
       const liveChainId = Number(await executionProvider.request({ method: 'eth_chainId' }));
       assertCurrent();
       const liveAccounts = await executionProvider.request({ method: 'eth_accounts' });
@@ -332,11 +342,13 @@ export default function PublicWorkspacePage() {
       execute: async (actionId, input, suppliedControl) => {
         if (suppliedControl !== executionControl) throw new Error('Workspace execution guard unavailable');
         assertCurrent();
-        const liveChainId = Number(await executionProvider.request({ method: 'eth_chainId' }));
-        assertCurrent();
-        const liveAccounts = await executionProvider.request({ method: 'eth_accounts' });
-        assertCurrent();
-        if (liveChainId !== deployment.chainId || canonicalAddress(liveAccounts?.[0]) !== currentAccount) throw new Error('Workspace identity changed');
+        if (!demo) {
+          const liveChainId = Number(await executionProvider.request({ method: 'eth_chainId' }));
+          assertCurrent();
+          const liveAccounts = await executionProvider.request({ method: 'eth_accounts' });
+          assertCurrent();
+          if (liveChainId !== deployment.chainId || canonicalAddress(liveAccounts?.[0]) !== currentAccount) throw new Error('Workspace identity changed');
+        }
         await verifyNormalized({ actionId, input, sdk: readSdk, deployment, account: currentAccount, assertCurrent });
         assertCurrent();
         return adapter.execute(actionId, input, suppliedControl);

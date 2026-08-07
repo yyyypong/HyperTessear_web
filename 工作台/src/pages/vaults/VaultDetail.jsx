@@ -135,9 +135,6 @@ function VaultDetailInner() {
           note={t.bp.vaultDetail.sidebarNote}
         />
         <div className="bp-workspace-main">
-          {fee.status === 'success' && fee.data?.supported !== false && (
-            <FeeOverviewCard t={t} data={fee.data} />
-          )}
           {status === 'loading' ? (
             <div className="bp-card bp-card-pad"><p className="bp-muted">{t.common.loading}</p></div>
           ) : heldRoles.length === 0 ? (
@@ -147,14 +144,16 @@ function VaultDetailInner() {
                 <p>{t.bp.vaultDetail.noRolesBody}</p>
               </div>
             </div>
+          ) : roleId === 'settlement-operator' ? (
+            <SettlementOperatorWorkspace vault={vaultAddress} />
           ) : (
-            roleId === 'settlement-operator' ? (
-              <SettlementOperatorWorkspace vault={vaultAddress} />
-            ) : (
-              <WorkspaceFrame>
-                <RoleWorkspacePage roleId={roleId} vault={vaultAddress} />
-              </WorkspaceFrame>
-            )
+            <WorkspaceFrame>
+              <RoleWorkspacePage roleId={roleId} vault={vaultAddress} />
+            </WorkspaceFrame>
+          )}
+          {/* Fee overview is Curator territory (vault.fees.set), not a banner on every role. */}
+          {roleId === 'curator' && fee.status === 'success' && fee.data?.supported !== false && (
+            <FeeOverviewCard t={t} data={fee.data} />
           )}
         </div>
       </div>

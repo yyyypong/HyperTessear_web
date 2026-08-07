@@ -130,9 +130,13 @@ export async function executeSignatureAction({ action: suppliedAction, rawInput,
   try {
     transactions.awaitingWallet(pendingId);
     const result = await buildLegacySignature(action.id, input, { ...signingContext, signer }, signatureBinding);
-    if (typeof signer?.getAddress === 'function' && !equalAddress(verifyMessage(getBytes(result.digest), result.signature), await signer.getAddress())) throw new ValidationError('recoveredSignerMismatch', 'signer');
+    const demo = signer?._demo === true;
+    if (!demo && typeof signer?.getAddress === 'function'
+      && !equalAddress(verifyMessage(getBytes(result.digest), result.signature), await signer.getAddress())) {
+      throw new ValidationError('recoveredSignerMismatch', 'signer');
+    }
     transactions.signed(pendingId, result);
-    return result;
+    return demo ? { ...result, simulated: true } : result;
   } catch (error) {
     const mapped = mapContractError(error);
     if (mapped.code === 'walletRejected') transactions.rejected(pendingId, mapped);

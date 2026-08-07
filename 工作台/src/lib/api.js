@@ -21,4 +21,5 @@ export const api = {
   product: (slug, opts) => get(`/products/${encodeURIComponent(slug)}`, opts),
   transparency: (opts) => get('/transparency', opts),
   liquidity: (opts) => get('/liquidity', opts),
+  protocolStats: (opts) => get('/protocol/stats', opts),
 };

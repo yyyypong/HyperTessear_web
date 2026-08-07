@@ -8,6 +8,7 @@ require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
 const mysql = require('mysql2/promise');
+const { seedDataPages } = require('./seed.data-pages');
 
 const DB_NAME = process.env.DB_NAME || 'HYT_TEST';
 
@@ -427,6 +428,11 @@ async function main() {
   console.log(`  currentTVL metric    : ${Number(tvl).toFixed(2)}`);
   console.log(`  attested reserves    : ${Number(res).toFixed(2)}`);
   console.log(`  reconciles           : ${ok ? 'yes' : 'NO — fix the seed'}`);
+
+  // Charts & Stats and Product Details. Runs last because it derives
+  // almost everything from the rows written above.
+  console.log('\n--- data pages -------------------------------------');
+  await seedDataPages(conn);
 
   console.log('\nMigration complete.');
   await conn.end();

@@ -38,18 +38,19 @@ export default function HeroShader() {
         radius={3.2}
       />
 
-      {/* finer, quieter glass ribs: lower refraction, higher frequency, so
-          the sheen is a fine woven shimmer rather than heavy caustics */}
+      {/* visible diagonal flutes: sharper seams and a crisper specular so
+          the diagonal ribbing actually reads on screen — still restrained,
+          just no longer a whisper */}
       <FlutedGlass
-        aberration={0.35}
+        aberration={0.45}
         angle={31}
-        frequency={15}
-        highlight={0.22}
-        highlightSoftness={0.24}
+        frequency={12}
+        highlight={0.6}
+        highlightSoftness={0.12}
         lightAngle={-90}
-        refraction={2.4}
+        refraction={3.2}
         shape="rounded"
-        softness={0.9}
+        softness={0.45}
         speed={0.08}
       />
 

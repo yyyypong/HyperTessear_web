@@ -4,6 +4,7 @@ const metricsService = require('../services/metrics.service');
 const productsService = require('../services/products.service');
 const transparencyService = require('../services/transparency.service');
 const liquidityService = require('../services/liquidity.service');
+const protocolService = require('../services/protocol.service');
 
 const router = express.Router();
 
@@ -38,6 +39,11 @@ router.get('/transparency', h(async (req, res) => {
 
 router.get('/liquidity', h(async (req, res) => {
   res.json(await liquidityService.getLiquidity(localeOf(req)));
+}));
+
+// Charts & Stats — protocol-level aggregates (data-pages plan §1).
+router.get('/protocol/stats', h(async (req, res) => {
+  res.json(await protocolService.getProtocolStats(localeOf(req)));
 }));
 
 router.get('/products/:slug', h(async (req, res) => {

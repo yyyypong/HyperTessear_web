@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { getAddress } from 'ethers';
 import { useI18n } from '../../i18n';
+import { useWallet } from '../../wallet';
 import { FORM_SCHEMAS } from '../config/formSchemas';
 import { CAPABILITY_STATES } from '../core/capabilityStates';
 import { isBuiltInSignatureAction } from '../core/signaturePayloads';
@@ -58,6 +59,7 @@ function Preview({ t, targetAddress, preview }) {
 
 export default function ActionPanel({ action, schema = FORM_SCHEMAS[action?.schemaId ?? action?.id], capability, onExecute, onSwitchNetwork, context = [], dangerous = false, targetAddress, preview }) {
   const { t } = useI18n();
+  const { isDemo } = useWallet();
   const [confirmation, setConfirmation] = useState('');
   const [outcome, setOutcome] = useState('');
   const { title, description } = actionCopy(t, action);
@@ -73,7 +75,9 @@ export default function ActionPanel({ action, schema = FORM_SCHEMAS[action?.sche
     try {
       setOutcome(t.workspaces.ui.submitting);
       await onExecute(action.id, rawInput);
-      setOutcome(isBuiltInSignatureAction(action.id) ? t.workspaces.ui.payloadSigned : t.workspaces.ui.actionSubmitted);
+      setOutcome(isDemo
+        ? t.workspaces.ui.demoSubmitted
+        : (isBuiltInSignatureAction(action.id) ? t.workspaces.ui.payloadSigned : t.workspaces.ui.actionSubmitted));
     } catch {
       setOutcome(t.workspaces.ui.actionFailed);
     }

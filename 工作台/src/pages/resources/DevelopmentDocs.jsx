@@ -1,17 +1,27 @@
 import { useI18n } from '../../i18n';
+import PageHead from '../../components/PageHead';
+import Reveal from '../../components/Reveal';
 
 export default function DevelopmentDocs() {
   const { t } = useI18n();
   return (
-    <div className="wrap accesspage">
-      <div className="phead">
-        <div className="section__eyebrow">{t.resources.docsEyebrow}</div>
-        <h1 className="phead__title">{t.resources.docsTitle}</h1>
-        <p className="section__lede">{t.resources.docsLede}</p>
-      </div>
-      <div className="shellcard">
-        <p className="shellcard__note">{t.workspace.phaseNote}</p>
-      </div>
-    </div>
+    <>
+      <PageHead
+        eyebrow={t.resources.docsEyebrow}
+        title={t.resources.docsTitle}
+        lede={t.resources.docsLede}
+      />
+      <section className="band band--paper">
+        <div className="wrap">
+          <Reveal>
+            <div className="resempty">
+              <p className="resempty__eyebrow">{t.resources.comingSoon}</p>
+              <h2 className="resempty__title">{t.resources.docsEmptyTitle}</h2>
+              <p className="resempty__body">{t.resources.docsEmptyBody}</p>
+            </div>
+          </Reveal>
+        </div>
+      </section>
+    </>
   );
 }

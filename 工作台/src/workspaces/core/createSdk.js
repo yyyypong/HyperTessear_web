@@ -34,7 +34,7 @@ export async function createWriteSdk(deployment, eip1193Provider) {
 
 /** Only SDKs constructed from a deployment manifest in this module receive a binding. */
 export function getSdkDeploymentBinding(sdk) {
-  return deploymentBindings.get(sdk) ?? null;
+  return deploymentBindings.get(sdk) ?? sdk?.__htDeploymentBinding ?? null;
 }
 
 const RWA_AMOUNT_ACTIONS = new Set(['mint.initiate', 'burn.initiate']);

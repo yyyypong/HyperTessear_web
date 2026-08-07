@@ -1,17 +1,27 @@
 import { useI18n } from '../../i18n';
+import PageHead from '../../components/PageHead';
+import Reveal from '../../components/Reveal';
 
 export default function Blog() {
   const { t } = useI18n();
   return (
-    <div className="wrap accesspage">
-      <div className="phead">
-        <div className="section__eyebrow">{t.resources.blogEyebrow}</div>
-        <h1 className="phead__title">{t.resources.blogTitle}</h1>
-        <p className="section__lede">{t.resources.blogLede}</p>
-      </div>
-      <div className="shellcard">
-        <p className="shellcard__note">{t.workspace.phaseNote}</p>
-      </div>
-    </div>
+    <>
+      <PageHead
+        eyebrow={t.resources.blogEyebrow}
+        title={t.resources.blogTitle}
+        lede={t.resources.blogLede}
+      />
+      <section className="band band--paper">
+        <div className="wrap">
+          <Reveal>
+            <div className="resempty">
+              <p className="resempty__eyebrow">{t.resources.comingSoon}</p>
+              <h2 className="resempty__title">{t.resources.blogEmptyTitle}</h2>
+              <p className="resempty__body">{t.resources.blogEmptyBody}</p>
+            </div>
+          </Reveal>
+        </div>
+      </section>
+    </>
   );
 }

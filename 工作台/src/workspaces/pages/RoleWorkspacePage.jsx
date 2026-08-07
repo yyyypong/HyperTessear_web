@@ -18,6 +18,7 @@ import { useTransactions } from '../core/transactionStore';
 import { validateActionInput } from '../core/validators';
 import { getWriteSigner } from '../core/walletRunner';
 import { loadPoolOverview, loadRoleOverview, loadSettlementOverview, loadVaultOverview, loadVaultRoleOverview } from '../core/workspaceQueries';
+import { createDemoAdapter, createDemoAmountDecimalsResolver, createDemoReadSdk, createDemoSigner, isDemoWallet, toDemoRelayerSubmission, validateDemoRelayerSource } from '../core/demoLayer';
 import { createCurrentAdapter } from '../sdk/currentAdapter';
 
 const DEPLOYMENT_CHAIN_ID = 97;
@@ -85,9 +86,11 @@ function configuredVault(deployment, vault) {
   return ['cashVault', 'noteVault', 'lpVault'].some(name => canonicalAddress(deployment.addresses[name]) === selected);
 }
 
-function bindManifestVaults(baseAdapter, deployment) {
+function bindManifestVaults(baseAdapter, deployment, { demo = false } = {}) {
   if (!baseAdapter) return null;
-  const allowed = (actionId, input) => getActionDefinition(actionId)?.scope !== 'vault' || configuredVault(deployment, input?.vault);
+  const allowed = (actionId, input) => demo
+    || getActionDefinition(actionId)?.scope !== 'vault'
+    || configuredVault(deployment, input?.vault);
   return {
     supports(actionId, input) { return allowed(actionId, input) && baseAdapter.supports(actionId, input); },
     async execute(actionId, input) {
@@ -188,7 +191,7 @@ function actionTarget(actionId, deployment, object) {
   return null;
 }
 
-function cachedHooks({ roleId, snapshot, account }) {
+function cachedHooks({ roleId, snapshot, account, demo = false }) {
   const vaultData = snapshot?.vault?.status === 'success' ? snapshot.vault.data : null;
   const roleData = snapshot?.roles?.status === 'success' ? snapshot.roles.data : null;
   const settlementData = snapshot?.settlement?.status === 'success' ? snapshot.settlement.data : null;
@@ -227,7 +230,7 @@ function cachedHooks({ roleId, snapshot, account }) {
       }
       if (!vaultData) throw new Error('vault state unavailable');
       if (!vaultData.registered) return false;
-      return roleId === 'keeper' ? keeperStateAllows(action.id, vaultData.state) : true;
+      return roleId === 'keeper' ? (demo || keeperStateAllows(action.id, vaultData.state)) : true;
     },
     isAuthorized: async ({ action }) => {
       if (roleId === 'asset-owner') {
@@ -363,6 +366,7 @@ export default function RoleWorkspacePage({ roleId, vault, assetId, adapterOverr
   const { t } = useI18n();
   const wallet = useWallet();
   const transactions = useTransactions();
+  const demo = isDemoWallet(wallet);
   const deployment = getDeployment(DEPLOYMENT_CHAIN_ID);
   const mergedParams = {
     ...params,
@@ -381,13 +385,24 @@ export default function RoleWorkspacePage({ roleId, vault, assetId, adapterOverr
   const operational = OPERATIONAL_ROLES.has(roleId);
 
   const sdkResult = useMemo(() => {
-    if (!operational || invalidObject || !wallet.session?.provider || Number(wallet.session.chainId) !== deployment.chainId) return { sdk: null, error: null };
+    if (!operational || invalidObject) return { sdk: null, error: null };
+    const chainOk = demo || Number(wallet.session?.chainId) === deployment.chainId;
+    if (!chainOk || (!demo && !wallet.session?.provider)) return { sdk: null, error: null };
+    if (demo) return { sdk: createDemoReadSdk(deployment), error: null };
     try { return { sdk: createReadSdk(deployment, wallet.session.provider), error: null }; }
     catch { return { sdk: null, error: t.workspaces.page.deploymentInitFailed }; }
-  }, [deployment, invalidObject, operational, wallet.session?.provider, wallet.session?.chainId, t]);
+  }, [deployment, demo, invalidObject, operational, wallet.session?.provider, wallet.session?.chainId, t]);
   const readSdk = sdkResult.sdk;
-  const adapter = useMemo(() => readSdk ? bindManifestVaults(createSignatureCapabilityAdapter(createCurrentAdapter({ readSdk, writeSdk: readSdk })), deployment) : null, [deployment, readSdk]);
-  const getAmountDecimals = useMemo(() => readSdk ? createAmountDecimalsResolver(readSdk) : null, [readSdk]);
+  const adapter = useMemo(() => readSdk ? bindManifestVaults(
+    createSignatureCapabilityAdapter(demo
+      ? createDemoAdapter(deployment)
+      : createCurrentAdapter({ readSdk, writeSdk: readSdk })),
+    deployment,
+    { demo },
+  ) : null, [deployment, demo, readSdk]);
+  const getAmountDecimals = useMemo(() => demo
+    ? createDemoAmountDecimalsResolver()
+    : readSdk ? createAmountDecimalsResolver(readSdk) : null, [demo, readSdk]);
   const identityKey = `${canonicalAddress(wallet.session?.address)?.toLowerCase() ?? 'disconnected'}|${Number(wallet.session?.chainId) || 'no-chain'}|${roleId}|${canonicalObject ?? 'no-object'}|${deployment.chainId}:${deployment.profile}:${deployment.sourceCommit}`;
   const identityRef = useRef(identityKey);
   const signingGenerationRef = useRef(0);
@@ -431,7 +446,7 @@ export default function RoleWorkspacePage({ roleId, vault, assetId, adapterOverr
 
   useEffect(() => {
     let current = true;
-    const hooks = cachedHooks({ roleId, snapshot, account: wallet.session?.address });
+    const hooks = cachedHooks({ roleId, snapshot, account: wallet.session?.address, demo });
     Promise.all(actions.map(async action => {
       const result = await resolveCapability({ wallet: wallet.session, chainId: wallet.session?.chainId, deployment, object, adapter, ...hooks }, action);
       if (result.state === 'targetOnly') {
@@ -505,7 +520,7 @@ export default function RoleWorkspacePage({ roleId, vault, assetId, adapterOverr
         ensureChain();
         const result = await loadVaultOverview({ sdk: readSdk, vault: executionObject.vault });
         if (result.status !== 'success') throw new Error('vault state unavailable');
-        return result.data.registered && (roleId !== 'keeper' || keeperStateAllows(checked.id, result.data.state));
+        return result.data.registered && (roleId !== 'keeper' || demo || keeperStateAllows(checked.id, result.data.state));
       },
       isAuthorized: async ({ action: checked }) => {
         ensureChain();
@@ -540,11 +555,11 @@ export default function RoleWorkspacePage({ roleId, vault, assetId, adapterOverr
       if (signingGeneration !== null && signingGenerationRef.current !== signingGeneration) throw new Error('Workspace signing operation changed');
       operation.assertCurrent?.();
     };
-    if (action.scope === 'vault' && !configuredVault(deployment, executionObject.vault)) throw new Error('Workspace action unavailable');
-    const rawChainId = await wallet.session.provider.request({ method: 'eth_chainId' });
+    if (!demo && action.scope === 'vault' && !configuredVault(deployment, executionObject.vault)) throw new Error('Workspace action unavailable');
+    const rawChainId = demo ? '0x61' : await wallet.session.provider.request({ method: 'eth_chainId' });
     assertCurrent();
     const currentChainId = Number(rawChainId);
-    const accounts = await wallet.session.provider.request({ method: 'eth_accounts' });
+    const accounts = demo ? [wallet.session.address] : await wallet.session.provider.request({ method: 'eth_accounts' });
     assertCurrent();
     const currentAccount = canonicalAddress(accounts?.[0]);
     if (!currentAccount) throw new Error('Workspace account unavailable');
@@ -553,7 +568,7 @@ export default function RoleWorkspacePage({ roleId, vault, assetId, adapterOverr
     const capability = await resolveCapability(capabilityContext, action);
     assertCurrent();
     if (capability.state !== 'available') throw Object.assign(new Error(capability.reasonKey), { capability });
-    if (['mint.approve', 'burn.approve'].includes(actionId)) {
+    if (!demo && ['mint.approve', 'burn.approve'].includes(actionId)) {
       const normalized = validateActionInput(actionId, rawInput);
       await preflightApprovalRequest(readSdk, actionId, normalized, executionObject.assetId);
       assertCurrent();
@@ -562,7 +577,9 @@ export default function RoleWorkspacePage({ roleId, vault, assetId, adapterOverr
       await operation.beforeSigner();
       assertCurrent();
     }
-    const signer = await getWriteSigner(wallet.session.provider);
+    const signer = demo
+      ? createDemoSigner(wallet.session.address)
+      : await getWriteSigner(wallet.session.provider);
     assertCurrent();
     const resolvedSignerAddress = await signer?.getAddress?.();
     assertCurrent();
@@ -601,6 +618,7 @@ export default function RoleWorkspacePage({ roleId, vault, assetId, adapterOverr
 
   const validateRelayerSource = async (source, assertCurrent = () => {}) => {
     assertCurrent();
+    if (demo) return validateDemoRelayerSource(source);
     if (!readSdk || Number(wallet.session?.chainId) !== deployment.chainId || typeof source !== 'string' || source.length > 64 * 1024) throw new Error('Signature import unavailable');
     let candidate;
     try { candidate = JSON.parse(source); } catch { throw new Error('Invalid signature import'); }
@@ -715,7 +733,7 @@ export default function RoleWorkspacePage({ roleId, vault, assetId, adapterOverr
     try {
       const envelope = await validateRelayerSource(source, assertCurrent);
       assertCurrent();
-      const submission = toRelayerSubmission(envelope);
+      const submission = demo ? toDemoRelayerSubmission(envelope) : toRelayerSubmission(envelope);
       assertCurrent();
       await onExecute(submission.actionId, submission.rawInput, submission.scope, {
         assertCurrent,

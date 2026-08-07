@@ -22,13 +22,18 @@ function shortHash(hash) {
   return hash ? `${hash.slice(0, 14)}…` : '—';
 }
 
+function shortAddr(address) {
+  if (!address || typeof address !== 'string') return '—';
+  return address.length > 12 ? `${address.slice(0, 6)}…${address.slice(-4)}` : address;
+}
+
 function stamp(seconds) {
   return seconds ? new Date(Number(seconds) * 1000).toLocaleString() : '—';
 }
 
 function QueueTable({ title, rows, emptyLabel, t }) {
   return (
-    <div>
+    <div className="bp-queue-panel">
       <div className="bp-small bp-strong" style={{ marginBottom: 6 }}>{title}</div>
       <div className="bp-table-wrap">
         <table className="bp-table">
@@ -48,7 +53,7 @@ function QueueTable({ title, rows, emptyLabel, t }) {
               <tr key={String(row.requestId)}>
                 <td className="bp-mono bp-small">{i + 1}</td>
                 <td className="bp-mono bp-small">#{String(row.requestId)}</td>
-                <td className="bp-small bp-mono">{row.owner}</td>
+                <td className="bp-small bp-mono" title={row.owner}>{shortAddr(row.owner)}</td>
                 <td className="bp-mono bp-small">{usd(row.amount)}</td>
               </tr>
             ))}
@@ -139,7 +144,13 @@ export default function SettlementOperatorWorkspace({ vault }) {
   }, [t]);
 
   const onSign = () => run('sign', async () => {
-    if (demo) throw new Error(t.bp.settlement.demoReadOnly);
+    if (demo) {
+      const hash = `0x${'ab'.repeat(32)}`;
+      const signature = `0x${'cd'.repeat(65)}`;
+      setInstructionHash(hash);
+      setSignatures(prev => (prev.includes(signature) ? prev : [...prev, signature]));
+      return t.bp.settlement.demoSigned;
+    }
     const signer = await getWriteSigner(session?.provider);
     const hash = await sdk.hashInstruction(instruction);
     const signature = await signer.signMessage(getBytes(hash));
@@ -149,7 +160,10 @@ export default function SettlementOperatorWorkspace({ vault }) {
   });
 
   const onSubmit = () => run('submit', async () => {
-    if (demo) throw new Error(t.bp.settlement.demoReadOnly);
+    if (demo) {
+      reload();
+      return t.bp.settlement.demoSubmitted;
+    }
     const signer = await getWriteSigner(session?.provider);
     const tx = await sdk.submitBatch(instruction, signatures, signer);
     reload();
@@ -157,8 +171,11 @@ export default function SettlementOperatorWorkspace({ vault }) {
   });
 
   const onConfirmFinal = () => run('final', async () => {
-    if (demo) throw new Error(t.bp.settlement.demoReadOnly);
     if (!shape?.canConfirmFinalSettlement) throw new Error(t.bp.settlement.finalUnsupported);
+    if (demo) {
+      reload();
+      return t.bp.settlement.demoSubmitted;
+    }
     const signer = await getWriteSigner(session?.provider);
     const settlement = sdk.getContract('Settlement', sdk.addresses?.settlement, signer);
     const tx = await settlement.confirmFinalSettlement(vault, signatures);
@@ -173,7 +190,10 @@ export default function SettlementOperatorWorkspace({ vault }) {
     const approved = form.get('approved') === 'on';
     const nextThreshold = Number(form.get('threshold'));
     run('config', async () => {
-      if (demo) throw new Error(t.bp.settlement.demoReadOnly);
+      if (demo) {
+        reload();
+        return t.bp.settlement.demoConfigSaved;
+      }
       const signer = await getWriteSigner(session?.provider);
       const settlement = sdk.getContract('Settlement', sdk.addresses?.settlement, signer);
       if (operator) {
@@ -212,7 +232,7 @@ export default function SettlementOperatorWorkspace({ vault }) {
       <div className="bp-page-head">
         <div>
           <div className="bp-eyebrow">{vaultRow?.symbol ?? 'Vault'} · Settlement Operator workspace</div>
-          <h1>{vaultRow?.name ?? vault}</h1>
+          <h1 title={vault}>{vaultRow?.name ?? shortAddr(vault)}</h1>
           <p>{t.bp.settlement.lede}</p>
         </div>
         <div className="bp-row">
@@ -279,7 +299,7 @@ export default function SettlementOperatorWorkspace({ vault }) {
           {operators.map(operator => (
             <div className="bp-req-item" key={operator}>
               <div>
-                <h4 className="bp-mono">{operator}</h4>
+                <h4 className="bp-mono" title={operator}>{shortAddr(operator)}</h4>
                 <p>{equalAddress(operator, address) ? t.bp.settlement.you : t.bp.settlement.operator}</p>
               </div>
               <Badge tone={equalAddress(operator, address) && signatures.length > 0 ? 'success' : 'neutral'}>
